@@ -156,9 +156,11 @@ for the arm64 release artifact.
 - Phase 2 dashboard commit `188aed0` was pushed on 2026-10-20; the remote
   `refs/heads/main` resolved to the same commit, and the working tree was clean
   before this documentation update.
-- Phase 2 completion (lifecycle, motion, accessibility) is committed with this
-  documentation update on `main`. Verify the current tip with `git status -sb`
-  and `git ls-remote --heads origin main`.
+- Phase 2 completion commit `de38dc3` was pushed on 2026-10-20; the remote
+  `refs/heads/main` resolved to the same commit, and the working tree was clean
+  before this documentation update.
+- Verify the current tip with `git status -sb` and
+  `git ls-remote --heads origin main`.
 - `plan.md` and `instructions.md` are preserved at the root unchanged.
 
 ## Next task
