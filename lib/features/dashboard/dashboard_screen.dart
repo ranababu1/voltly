@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:voltly/app/theme/app_colors.dart';
 import 'package:voltly/app/theme/app_tokens.dart';
+import 'package:voltly/features/dashboard/telemetry_diagnostics_screen.dart';
 
 /// Voltly's current app shell.
 ///
@@ -146,12 +147,12 @@ class _FoundationNotice extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text('No readings yet', style: textTheme.titleMedium),
+                      Text('Telemetry connected', style: textTheme.titleMedium),
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
-                        'Battery telemetry is not connected in this build. '
-                        'Readings will appear here once the native Android '
-                        'adapter is integrated — never placeholder values.',
+                        'The native adapter is live. Live dashboard metrics '
+                        'arrive in the next milestone; open diagnostics to '
+                        'inspect real readings, availability and provenance.',
                         style: textTheme.bodyMedium,
                       ),
                     ],
@@ -163,13 +164,29 @@ class _FoundationNotice extends StatelessWidget {
             const Divider(),
             const SizedBox(height: AppSpacing.sm),
             const _CapabilityRow(
-              label: 'App shell and theme ready',
+              label: 'Native telemetry adapter ready',
               isComplete: true,
             ),
             const SizedBox(height: AppSpacing.xs),
             const _CapabilityRow(
-              label: 'Next: device-reported battery readings',
+              label: 'Next: dashboard metrics and states',
               isComplete: false,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (BuildContext context) =>
+                          const TelemetryDiagnosticsScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.developer_mode_rounded, size: 18),
+                label: const Text('Open telemetry diagnostics'),
+              ),
             ),
           ],
         ),

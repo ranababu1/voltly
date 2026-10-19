@@ -2,6 +2,55 @@
 
 Newest-first record of meaningful implementation changes.
 
+## 2026-10-20 — Phase 1 complete: real-service telemetry diagnostics
+
+**Milestone:** Phase 1 — Native Battery Telemetry
+
+**Summary**
+
+- Added `flutter_riverpod` 3.4.3, wrapped the app in `ProviderScope`, and added
+  one telemetry service provider plus an auto-dispose `StreamProvider`.
+  Automatic provider retry is disabled so native failures surface immediately.
+- Added a developer diagnostics screen reachable from the dashboard. It renders
+  every metric independently with value/unit or availability plus reason,
+  per-metric observation time, provenance badges, live/stale state, and
+  calculated battery-side power. Loading, error, unavailable, stale and
+  retry states are covered.
+- The auto-disposed provider releases the native `ACTION_BATTERY_CHANGED`
+  receiver when the screen closes, preserving the no-polling design.
+- Updated the dashboard foundation copy and capability rows to reflect the live
+  adapter; the dashboard still shows no telemetry values.
+- Added a replaying fake telemetry service and seven diagnostics widget tests,
+  including navigation, error, unavailable and 2× text scaling coverage.
+- Bumped the project version to `0.2.0+2`.
+
+**Verification**
+
+- `flutter analyze` — no issues.
+- `flutter test` — 39/39 passed (16 contract, 7 power, 6 channel, 7 diagnostics,
+  3 foundation widget tests).
+- `.\gradlew.bat :app:testDebugUnitTest` — 13/13 Kotlin tests passed.
+- `flutter build apk --debug` — succeeded.
+- `flutter build apk --release` — succeeded (43.3 MB, debug certificate; not
+  distributable).
+- Debug APK installed and cold-launched on a Pixel 10a AVD (Android 17).
+  On-device diagnostics matched `dumpsys battery`: level 100%, status
+  "Not charging", 5.00 V, 25.0 °C, charge counter 10.0 mAh. Calculated power
+  showed 4.50 W and was labeled Calculated/approximate. No `AndroidRuntime`
+  errors.
+- The diagnostics UI text was captured through `uiautomator dump`; no
+  fabricated or zero-filled unavailable values were observed.
+
+**Known limitations**
+
+- Physical-device telemetry validation is still pending. Emulator values prove
+  the pipeline, not hardware-specific sign or unit behavior.
+- The emulator reports 0.900 A while unplugged and "Not charging"; this is shown
+  faithfully as device-reported data.
+- The user-facing dashboard remains Phase 2 work.
+- Release signing, AAB generation and the universal + arm64 GitHub Release
+  artifacts remain outstanding for an approved release.
+
 ## 2026-10-19 — Phase 1 (in progress): Native telemetry adapter
 
 **Milestone:** Phase 1 — Native Battery Telemetry

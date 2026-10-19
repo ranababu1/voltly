@@ -16,10 +16,11 @@ void main() {
       find.text('Battery intelligence, beautifully simple.'),
       findsOneWidget,
     );
-    expect(find.text('No readings yet'), findsOneWidget);
+    expect(find.text('Telemetry connected'), findsOneWidget);
+    expect(find.text('Open telemetry diagnostics'), findsOneWidget);
     expect(find.textContaining('Android 8.0+'), findsOneWidget);
 
-    // Phase 0 must never present a fabricated battery reading.
+    // The dashboard must never present a fabricated battery reading.
     expect(find.textContaining('%'), findsNothing);
   });
 

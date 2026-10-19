@@ -1,7 +1,9 @@
 # Voltly Telemetry Contract v1
 
-Status: implemented in the Kotlin adapter and Dart client. Dashboard
-integration is in progress.
+Status: implemented in the Kotlin adapter and typed Dart client, and validated
+end-to-end on an Android emulator. Physical-device validation is pending. The
+developer diagnostics screen is the current UI client; the Phase 2 dashboard
+will consume the same contract.
 
 This is the authoritative description of the Android-to-Dart battery telemetry
 boundary. The Kotlin `BatteryTelemetryReader` is the single acquisition source.

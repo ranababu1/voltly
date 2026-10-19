@@ -34,22 +34,53 @@ Map<String, Object?> telemetryPayload({
   'schemaVersion': schemaVersion,
   'observedAtMillis': observedAtMillis,
   'batteryLevel':
-      batteryLevel ?? telemetryReading(value: 72, unit: TelemetryUnits.percent),
-  'chargingState': chargingState ?? telemetryReading(value: 'charging'),
-  'plugSource': plugSource ?? telemetryReading(value: 'usb'),
+      batteryLevel ??
+      telemetryReading(
+        value: 72,
+        unit: TelemetryUnits.percent,
+        timestampMillis: observedAtMillis,
+      ),
+  'chargingState':
+      chargingState ??
+      telemetryReading(value: 'charging', timestampMillis: observedAtMillis),
+  'plugSource':
+      plugSource ??
+      telemetryReading(value: 'usb', timestampMillis: observedAtMillis),
   'voltage':
-      voltage ?? telemetryReading(value: 4.2, unit: TelemetryUnits.volts),
+      voltage ??
+      telemetryReading(
+        value: 4.2,
+        unit: TelemetryUnits.volts,
+        timestampMillis: observedAtMillis,
+      ),
   'temperature':
       temperature ??
-      telemetryReading(value: 31.5, unit: TelemetryUnits.celsius),
+      telemetryReading(
+        value: 31.5,
+        unit: TelemetryUnits.celsius,
+        timestampMillis: observedAtMillis,
+      ),
   'currentNow':
-      currentNow ?? telemetryReading(value: 1.5, unit: TelemetryUnits.amperes),
+      currentNow ??
+      telemetryReading(
+        value: 1.5,
+        unit: TelemetryUnits.amperes,
+        timestampMillis: observedAtMillis,
+      ),
   'currentAverage':
       currentAverage ??
-      telemetryReading(value: 1.4, unit: TelemetryUnits.amperes),
+      telemetryReading(
+        value: 1.4,
+        unit: TelemetryUnits.amperes,
+        timestampMillis: observedAtMillis,
+      ),
   'chargeCounter':
       chargeCounter ??
-      telemetryReading(value: 3500, unit: TelemetryUnits.milliampereHours),
+      telemetryReading(
+        value: 3500,
+        unit: TelemetryUnits.milliampereHours,
+        timestampMillis: observedAtMillis,
+      ),
 };
 
 TelemetrySnapshot parseFixture([Map<String, Object?>? payload]) =>
