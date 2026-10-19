@@ -2,6 +2,51 @@
 
 Newest-first record of meaningful implementation changes.
 
+## 2026-10-19 — Phase 1 (in progress): Native telemetry adapter
+
+**Milestone:** Phase 1 — Native Battery Telemetry
+
+**Summary**
+
+- Added `BatteryTelemetryConversions`: pure, unit-tested conversions from
+  Android's raw units to canonical percent, volts, amperes, Celsius and
+  milliampere-hours, plus status/plug mappings and plausibility guards.
+- Added `BatteryTelemetryReader`: the single native acquisition source. It reads
+  `ACTION_BATTERY_CHANGED` extras and `BatteryManager` properties, reports each
+  metric independently with availability/reason metadata, and never coerces
+  missing values to zero.
+- Added `BatteryTelemetryChannel`: MethodChannel `getSnapshot` plus an
+  EventChannel that registers `ACTION_BATTERY_CHANGED` only while Dart listens.
+  The receiver is unregistered on cancel/engine cleanup; no polling or
+  background service is used.
+- Registered the channel host in `MainActivity` and disposed it with the
+  Flutter engine.
+- Added the typed Dart contract: strict payload parsing, per-metric
+  availability/source/timestamp, explicit zero-vs-unavailable handling,
+  schema-version rejection and defensive degradation of malformed metrics.
+- Added `calculateBatteryPower`: battery-side watts derived only from available,
+  contemporaneous voltage and current, labeled calculated/approximate.
+- Added `docs/telemetry-contract.md` documenting channels, units, sign
+  convention, timestamps, availability, errors and versioning.
+- Added 13 Kotlin unit tests and 29 Dart tests (16 contract, 7 power, 6 channel).
+
+**Verification**
+
+- `flutter analyze` — no issues.
+- `flutter test` — 32/32 passed (29 new + 3 existing widget tests).
+- `.\gradlew.bat :app:testDebugUnitTest` — 13/13 Kotlin tests passed.
+- `flutter build apk --debug` — succeeded.
+
+**Known limitations**
+
+- The app does not yet display telemetry; the diagnostics UI and Riverpod
+  integration are the next increment. End-to-end channel validation on the
+  emulator is therefore pending.
+- No physical-device telemetry validation has been performed. Vendor metric
+  availability and current sign behavior remain unverified on hardware.
+- `currentAverage` and `chargeCounter` are frequently unsupported; this is
+  reported explicitly rather than estimated.
+
 ## 2026-10-19 — Phase 0: Foundation
 
 **Milestone:** Phase 0 — Foundation

@@ -46,3 +46,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Local JVM tests for the pure native unit conversions and enum mappings.
+    testImplementation("junit:junit:4.13.2")
+}
