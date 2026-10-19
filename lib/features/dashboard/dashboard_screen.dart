@@ -37,7 +37,7 @@ class DashboardScreen extends ConsumerWidget {
 
             return RefreshIndicator(
               onRefresh: () async {
-                ref.invalidate(telemetrySnapshotProvider);
+                ref.read(telemetrySnapshotProvider.notifier).retry();
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -89,9 +89,11 @@ class DashboardScreen extends ConsumerWidget {
                               error: (Object error, StackTrace stackTrace) =>
                                   _DashboardError(
                                     error: error,
-                                    onRetry: () => ref.invalidate(
-                                      telemetrySnapshotProvider,
-                                    ),
+                                    onRetry: () => ref
+                                        .read(
+                                          telemetrySnapshotProvider.notifier,
+                                        )
+                                        .retry(),
                                   ),
                             ),
                           ],
@@ -198,6 +200,11 @@ class _DashboardData extends StatelessWidget {
                       icon: Icons.bolt,
                       reading: snapshot.voltage,
                       value: formatTelemetryNumeric(snapshot.voltage, 2, 'V'),
+                      spokenValue: spokenTelemetryNumeric(
+                        snapshot.voltage,
+                        2,
+                        'volts',
+                      ),
                     ),
                   ),
                   SizedBox(
@@ -210,6 +217,11 @@ class _DashboardData extends StatelessWidget {
                         snapshot.temperature,
                         1,
                         '°C',
+                      ),
+                      spokenValue: spokenTelemetryNumeric(
+                        snapshot.temperature,
+                        1,
+                        'degrees Celsius',
                       ),
                     ),
                   ),
@@ -224,6 +236,11 @@ class _DashboardData extends StatelessWidget {
                         3,
                         'A',
                       ),
+                      spokenValue: spokenTelemetryNumeric(
+                        snapshot.currentNow,
+                        3,
+                        'amperes',
+                      ),
                     ),
                   ),
                   SizedBox(
@@ -237,6 +254,11 @@ class _DashboardData extends StatelessWidget {
                         3,
                         'A',
                       ),
+                      spokenValue: spokenTelemetryNumeric(
+                        snapshot.currentAverage,
+                        3,
+                        'amperes',
+                      ),
                     ),
                   ),
                   SizedBox(
@@ -249,6 +271,11 @@ class _DashboardData extends StatelessWidget {
                         snapshot.chargeCounter,
                         1,
                         'mAh',
+                      ),
+                      spokenValue: spokenTelemetryNumeric(
+                        snapshot.chargeCounter,
+                        1,
+                        'milliampere hours',
                       ),
                     ),
                   ),
@@ -285,6 +312,7 @@ class _PrimaryBatteryCard extends StatelessWidget {
     final bool levelAvailable = level.isAvailable;
     final double? levelValue = level.value;
     final BatteryChargingState? stateValue = state.value;
+    final String chargingSemantics = _chargingSemantics(state, plug);
 
     return Card(
       child: Padding(
@@ -310,34 +338,38 @@ class _PrimaryBatteryCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                levelAvailable && levelValue != null
-                    ? formatBatteryPercent(levelValue)
-                    : 'Battery level unavailable',
-                style: levelAvailable
-                    ? textTheme.displayLarge
-                    : textTheme.titleLarge?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
+            Semantics(
+              container: true,
+              label: levelAvailable && levelValue != null
+                  ? 'Battery level ${levelValue.round()} percent'
+                  : 'Battery level unavailable',
+              child: ExcludeSemantics(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    levelAvailable && levelValue != null
+                        ? formatBatteryPercent(levelValue)
+                        : 'Battery level unavailable',
+                    style: levelAvailable
+                        ? textTheme.displayLarge
+                        : textTheme.titleLarge?.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                  ),
+                ),
               ),
             ),
             if (levelAvailable && levelValue != null) ...<Widget>[
               const SizedBox(height: AppSpacing.sm),
-              Semantics(
-                label: 'Battery level',
-                value: '${levelValue.round()} percent',
-                child: ExcludeSemantics(
-                  child: ClipRRect(
-                    borderRadius: AppRadius.pill,
-                    child: LinearProgressIndicator(
-                      value: levelValue.clamp(0.0, 100.0).toDouble() / 100,
-                      minHeight: 8,
-                      backgroundColor: AppColors.surfaceElevated,
-                      color: AppColors.mint,
-                    ),
+              ExcludeSemantics(
+                child: ClipRRect(
+                  borderRadius: AppRadius.pill,
+                  child: LinearProgressIndicator(
+                    value: levelValue.clamp(0.0, 100.0).toDouble() / 100,
+                    minHeight: 8,
+                    backgroundColor: AppColors.surfaceElevated,
+                    color: AppColors.mint,
                   ),
                 ),
               ),
@@ -346,43 +378,57 @@ class _PrimaryBatteryCard extends StatelessWidget {
               Text(level.reason!, style: textTheme.bodySmall),
             ],
             const SizedBox(height: AppSpacing.md),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Icon(
-                  _stateIcon(stateValue),
-                  color: _stateColor(stateValue),
-                  size: 20,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        state.isAvailable
-                            ? formatTelemetryChargingState(state)
-                            : 'Charging state unavailable',
-                        style: textTheme.titleMedium,
+            Semantics(
+              container: true,
+              label: chargingSemantics,
+              child: ExcludeSemantics(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    ChargingPulse(
+                      active: stateValue == BatteryChargingState.charging,
+                      child: Icon(
+                        _stateIcon(stateValue),
+                        color: _stateColor(stateValue),
+                        size: 20,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        plug.isAvailable
-                            ? 'Power source: ${formatTelemetryPlugSource(plug)}'
-                            : 'Power source unavailable',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            state.isAvailable
+                                ? formatTelemetryChargingState(state)
+                                : 'Charging state unavailable',
+                            style: textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            plug.isAvailable
+                                ? 'Power source: ${formatTelemetryPlugSource(plug)}'
+                                : 'Power source unavailable',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          if (!state.isAvailable &&
+                              state.reason != null) ...<Widget>[
+                            const SizedBox(height: 2),
+                            Text(state.reason!, style: textTheme.bodySmall),
+                          ],
+                          if (!plug.isAvailable &&
+                              plug.reason != null) ...<Widget>[
+                            const SizedBox(height: 2),
+                            Text(plug.reason!, style: textTheme.bodySmall),
+                          ],
+                        ],
                       ),
-                      if (!state.isAvailable &&
-                          state.reason != null) ...<Widget>[
-                        const SizedBox(height: 2),
-                        Text(state.reason!, style: textTheme.bodySmall),
-                      ],
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             const Divider(),
@@ -411,6 +457,28 @@ class _PrimaryBatteryCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _chargingSemantics(
+  TelemetryReading<BatteryChargingState> state,
+  TelemetryReading<BatteryPlugSource> plug,
+) {
+  final String stateText = state.isAvailable
+      ? formatTelemetryChargingState(state)
+      : 'Charging state unavailable';
+  final String plugText = plug.isAvailable
+      ? formatTelemetryPlugSource(plug)
+      : 'Power source unavailable';
+  final StringBuffer buffer = StringBuffer(
+    'Charging state: $stateText. Power source: $plugText.',
+  );
+  if (!state.isAvailable && state.reason != null) {
+    buffer.write(' ${state.reason}');
+  }
+  if (!plug.isAvailable && plug.reason != null) {
+    buffer.write(' ${plug.reason}');
+  }
+  return buffer.toString();
 }
 
 IconData _stateIcon(BatteryChargingState? state) => switch (state) {
@@ -464,6 +532,7 @@ class _MetricCard extends StatelessWidget {
     required this.icon,
     required this.reading,
     required this.value,
+    required this.spokenValue,
   });
 
   final String label;
@@ -471,65 +540,81 @@ class _MetricCard extends StatelessWidget {
   final TelemetryReading<Object> reading;
   final String value;
 
+  /// Screen-reader-friendly value, e.g. "4.20 volts".
+  final String spokenValue;
+
   @override
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
     final bool available = reading.isAvailable;
+    final String semanticsLabel =
+        '$label, $spokenValue, '
+        '${telemetryAvailabilityLabel(reading.availability)}, '
+        '${telemetrySourceLabel(reading.source)}'
+        '${!available && reading.reason != null ? '. ${reading.reason}' : ''}';
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
+    return Semantics(
+      container: true,
+      label: semanticsLabel,
+      child: ExcludeSemantics(
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Icon(
-                  icon,
-                  size: 18,
-                  color: available ? AppColors.mint : AppColors.textTertiary,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
+                Row(
+                  children: <Widget>[
+                    Icon(
+                      icon,
+                      size: 18,
+                      color: available
+                          ? AppColors.mint
+                          : AppColors.textTertiary,
                     ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  value,
+                  style: textTheme.titleLarge?.copyWith(
+                    color: available
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary,
                   ),
                 ),
+                const SizedBox(height: AppSpacing.xs),
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xxs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    TelemetryBadge(
+                      label: telemetryAvailabilityLabel(reading.availability),
+                      color: telemetryAvailabilityColor(reading.availability),
+                    ),
+                    TelemetryBadge(
+                      label: telemetrySourceLabel(reading.source),
+                      color: telemetrySourceColor(reading.source),
+                    ),
+                  ],
+                ),
+                if (!available && reading.reason != null) ...<Widget>[
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(reading.reason!, style: textTheme.bodySmall),
+                ],
               ],
             ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              value,
-              style: textTheme.titleLarge?.copyWith(
-                color: available
-                    ? AppColors.textPrimary
-                    : AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Wrap(
-              spacing: AppSpacing.xs,
-              runSpacing: AppSpacing.xxs,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: <Widget>[
-                TelemetryBadge(
-                  label: telemetryAvailabilityLabel(reading.availability),
-                  color: telemetryAvailabilityColor(reading.availability),
-                ),
-                TelemetryBadge(
-                  label: telemetrySourceLabel(reading.source),
-                  color: telemetrySourceColor(reading.source),
-                ),
-              ],
-            ),
-            if (!available && reading.reason != null) ...<Widget>[
-              const SizedBox(height: AppSpacing.xxs),
-              Text(reading.reason!, style: textTheme.bodySmall),
-            ],
-          ],
+          ),
         ),
       ),
     );
@@ -545,62 +630,77 @@ class _PowerSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final TextTheme textTheme = Theme.of(context).textTheme;
     final bool available = power.isAvailable;
+    final String semanticsLabel =
+        'Battery-side power, ${spokenTelemetryNumeric(power, 2, 'watts')}, '
+        '${telemetrySourceLabel(power.source)}, '
+        '${telemetryAvailabilityLabel(power.availability)}. '
+        'Approximate battery-side power, not charger input power.'
+        '${!available && power.reason != null ? ' ${power.reason}' : ''}';
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
+    return Semantics(
+      container: true,
+      label: semanticsLabel,
+      child: ExcludeSemantics(
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Icon(Icons.bolt, size: 18, color: AppColors.mint),
-                const SizedBox(width: AppSpacing.xs),
-                Expanded(
-                  child: Text('Battery-side power', style: textTheme.bodyLarge),
+                Row(
+                  children: <Widget>[
+                    const Icon(Icons.bolt, size: 18, color: AppColors.mint),
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: Text(
+                        'Battery-side power',
+                        style: textTheme.bodyLarge,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              formatTelemetryNumeric(power, 2, 'W'),
-              style: textTheme.titleLarge?.copyWith(
-                color: available
-                    ? AppColors.textPrimary
-                    : AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Wrap(
-              spacing: AppSpacing.xs,
-              runSpacing: AppSpacing.xxs,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: <Widget>[
-                TelemetryBadge(
-                  label: telemetrySourceLabel(power.source),
-                  color: telemetrySourceColor(power.source),
-                ),
-                TelemetryBadge(
-                  label: telemetryAvailabilityLabel(power.availability),
-                  color: telemetryAvailabilityColor(power.availability),
-                ),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Observed ${formatTelemetryTime(power.observedAt)}',
+                  formatTelemetryNumeric(power, 2, 'W'),
+                  style: textTheme.titleLarge?.copyWith(
+                    color: available
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xxs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    TelemetryBadge(
+                      label: telemetrySourceLabel(power.source),
+                      color: telemetrySourceColor(power.source),
+                    ),
+                    TelemetryBadge(
+                      label: telemetryAvailabilityLabel(power.availability),
+                      color: telemetryAvailabilityColor(power.availability),
+                    ),
+                    Text(
+                      'Observed ${formatTelemetryTime(power.observedAt)}',
+                      style: textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Calculated from voltage × current. Approximate battery-side '
+                  'power, not wall-charger or adapter input power.',
                   style: textTheme.bodySmall,
                 ),
+                if (!available && power.reason != null) ...<Widget>[
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(power.reason!, style: textTheme.bodySmall),
+                ],
               ],
             ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Calculated from voltage × current. Approximate battery-side '
-              'power, not wall-charger or adapter input power.',
-              style: textTheme.bodySmall,
-            ),
-            if (!available && power.reason != null) ...<Widget>[
-              const SizedBox(height: AppSpacing.xxs),
-              Text(power.reason!, style: textTheme.bodySmall),
-            ],
-          ],
+          ),
         ),
       ),
     );

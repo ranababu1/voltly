@@ -2,6 +2,62 @@
 
 Newest-first record of meaningful implementation changes.
 
+## 2026-10-20 — Phase 2 complete: lifecycle, motion and accessibility
+
+**Milestone:** Phase 2 — Dashboard and Visual System
+
+**Summary**
+
+- Replaced the stream-provider wiring with a single `TelemetryController`
+  notifier that owns one service subscription, cancels it explicitly when the
+  app leaves the foreground, retains the last snapshot and resubscribes on
+  resume. Automatic retry remains disabled; Retry is explicit.
+- Added app lifecycle observation at the root (`ConsumerStatefulWidget` +
+  `WidgetsBindingObserver`). Inactive/paused/hidden states stop acquisition;
+  `resumed` restarts it without polling or losing the last observation.
+- Added `ChargingPulse`, a restrained charging-state icon animation that runs
+  only while the reported state is charging and stops when Android requests
+  reduced motion.
+- Added concise semantics labels for battery level, charging state and power
+  source, each metric card and calculated power. The decorative progress bar is
+  excluded from semantics; status never relies on color alone.
+- Reworked the test fake into explicit per-listener stream controllers so
+  subscription and cancellation behavior is deterministic.
+- Added lifecycle provider tests, app lifecycle integration coverage, motion
+  tests and a screen-reader semantics test.
+- Bumped the version to `0.4.0+4`.
+
+**Verification**
+
+- `dart format --output=none --set-exit-if-changed lib test` — exit 0.
+- `flutter analyze` — no issues.
+- `flutter test` — 49/49 passed (16 contract, 7 power, 6 channel,
+  6 diagnostics, 9 dashboard, 2 lifecycle provider, 1 motion,
+  2 app/lifecycle).
+- `.\gradlew.bat :app:testDebugUnitTest` — 13/13 Kotlin tests passed.
+- `flutter build apk --debug` — succeeded.
+- `flutter build apk --release` — succeeded (43.5 MB, debug certificate; not
+  distributable).
+- APKs report versionName `0.4.0`, versionCode `4`, minSdk `26`, compile/target
+  SDK `36`. Release manifest has no `INTERNET` permission.
+- Pixel 10a AVD (Android 17): dashboard values matched `dumpsys battery`;
+  simulated `level 42`, `status 2` and `ac 1` updated the live screen to 42%,
+  "Charging" and "AC" without restart. Home then resume produced a HOT return
+  with fresh values. No `AndroidRuntime` errors.
+- `uiautomator dump` confirmed labels such as "Battery level 42 percent" and
+  "Voltage, 5.00 volts, Available, Device".
+
+**Known limitations**
+
+- Physical-device telemetry and manual TalkBack/screen-reader validation are
+  still pending.
+- The emulator reports 0.900 A while unplugged; it is shown faithfully and does
+  not validate hardware current semantics.
+- The dashboard is dark-only; no light theme is included.
+- Charging sessions, history, charts, alerts and estimates remain Phase 3+.
+- Release signing, AAB generation and GitHub Release APK artifacts remain
+  outstanding for an approved release.
+
 ## 2026-10-20 — Phase 2 (in progress): telemetry-driven dashboard core
 
 **Milestone:** Phase 2 — Dashboard and Visual System

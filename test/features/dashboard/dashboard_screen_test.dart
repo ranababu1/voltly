@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:voltly/core/telemetry/telemetry_models.dart';
+import 'package:voltly/features/dashboard/telemetry_presentation.dart';
 
 import '../../support/pump_voltly_app.dart';
 import '../../support/telemetry_fixtures.dart';
@@ -34,6 +35,10 @@ void main() {
     expect(find.text('Live'), findsOneWidget);
     expect(find.textContaining('Observed'), findsWidgets);
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    final ChargingPulse pulse = tester.widget<ChargingPulse>(
+      find.byType(ChargingPulse),
+    );
+    expect(pulse.active, isTrue);
   });
 
   testWidgets('renders low-capability metrics without zero fallbacks', (
@@ -86,6 +91,10 @@ void main() {
     expect(find.text('0.0 °C'), findsNothing);
     expect(find.text('0.000 A'), findsNothing);
     expect(find.text('0.00 W'), findsNothing);
+    expect(
+      tester.widget<ChargingPulse>(find.byType(ChargingPulse)).active,
+      isFalse,
+    );
   });
 
   testWidgets('never renders zero when battery level is unavailable', (
@@ -170,6 +179,36 @@ void main() {
     expect(find.text('Battery overview'), findsOneWidget);
     expect(find.text('72%'), findsOneWidget);
     expect(find.text('Battery-side power'), findsOneWidget);
+  });
+
+  testWidgets('exposes concise screen-reader labels for key readings', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle handle = tester.ensureSemantics();
+
+    await pumpVoltlyApp(tester, snapshot: snapshotAt(DateTime.now()));
+
+    expect(find.bySemanticsLabel('Battery level 72 percent'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel(
+        RegExp('Charging state: Charging\\. Power source: USB\\.'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.bySemanticsLabel('Voltage, 4.20 volts, Available, Device'),
+      findsOneWidget,
+    );
+
+    await tester.ensureVisible(find.text('Battery-side power'));
+    await tester.pump();
+    expect(
+      find.bySemanticsLabel(
+        RegExp('Battery-side power, 6\\.30 watts, Calculated, Available'),
+      ),
+      findsOneWidget,
+    );
+    handle.dispose();
   });
 
   testWidgets('opens telemetry diagnostics from the dashboard', (

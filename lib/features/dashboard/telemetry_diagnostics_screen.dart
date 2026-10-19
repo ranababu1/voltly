@@ -28,11 +28,11 @@ class TelemetryDiagnosticsScreen extends ConsumerWidget {
       body: snapshot.when(
         data: (TelemetrySnapshot data) => _DiagnosticsBody(
           snapshot: data,
-          onRefresh: () => ref.invalidate(telemetrySnapshotProvider),
+          onRefresh: () => ref.read(telemetrySnapshotProvider.notifier).retry(),
         ),
         error: (Object error, StackTrace stackTrace) => _ErrorState(
           error: error,
-          onRetry: () => ref.invalidate(telemetrySnapshotProvider),
+          onRetry: () => ref.read(telemetrySnapshotProvider.notifier).retry(),
         ),
         loading: () => const _LoadingState(),
       ),

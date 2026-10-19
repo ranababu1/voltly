@@ -17,8 +17,10 @@ No widget may call these channels or Android APIs directly.
 | On-demand read | `com.voltly/telemetry` (`MethodChannel`) | Method `getSnapshot` returns one snapshot map. |
 
 The native receiver is registered in `onListen` and unregistered in `onCancel`
-or engine cleanup. The adapter does not poll. Battery broadcasts are
-system-driven, so update cadence varies by device and state.
+or engine cleanup. The Dart `TelemetryController` cancels its subscription when
+the app leaves the foreground, which unregisters the receiver; it resumes on
+return and retains the last snapshot. The adapter does not poll. Battery
+broadcasts are system-driven, so update cadence varies by device and state.
 
 ## Snapshot envelope
 

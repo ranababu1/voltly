@@ -30,6 +30,16 @@ String formatTelemetryNumeric(
   return '${reading.value!.toStringAsFixed(decimals)} $unit';
 }
 
+/// Spoken form used in semantics labels, e.g. "4.20 volts" instead of "4.20 V".
+String spokenTelemetryNumeric(
+  TelemetryReading<double> reading,
+  int decimals,
+  String unitName,
+) {
+  if (!reading.isAvailable) return 'unavailable';
+  return '${reading.value!.toStringAsFixed(decimals)} $unitName';
+}
+
 String formatTelemetryChargingState(
   TelemetryReading<BatteryChargingState> reading,
 ) {
@@ -226,5 +236,69 @@ class TelemetryFreshnessBadge extends StatelessWidget {
         color: isStale ? AppColors.warning : AppColors.mint,
       ),
     );
+  }
+}
+
+/// A restrained pulse for the charging-state icon.
+///
+/// It runs only for the reported charging state and stops entirely when the
+/// platform requests reduced motion or when the state is not charging. It is
+/// decorative: the adjacent charging-state text carries the meaning.
+class ChargingPulse extends StatefulWidget {
+  const ChargingPulse({super.key, required this.active, required this.child});
+
+  final bool active;
+  final Widget child;
+
+  @override
+  State<ChargingPulse> createState() => _ChargingPulseState();
+}
+
+class _ChargingPulseState extends State<ChargingPulse>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1600),
+    value: 1,
+  );
+  late final Animation<double> _opacity = Tween<double>(
+    begin: 0.55,
+    end: 1,
+  ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(covariant ChargingPulse oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _sync();
+  }
+
+  void _sync() {
+    if (!mounted) return;
+    final bool reduceMotion = MediaQuery.disableAnimationsOf(context);
+    if (widget.active && !reduceMotion) {
+      if (!_controller.isAnimating) {
+        _controller.repeat(reverse: true);
+      }
+    } else {
+      _controller.stop();
+      _controller.value = 1;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(opacity: _opacity, child: widget.child);
   }
 }
