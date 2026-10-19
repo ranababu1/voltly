@@ -194,6 +194,9 @@ for the arm64 release artifact.
 - Phase 3 session-domain commit `73c8bda` was pushed on 2026-10-20; the remote
   `refs/heads/main` resolved to the same commit, and the working tree was clean
   before this documentation update.
+- Phase 3 persistence commit `a19b636` was pushed on 2026-10-20; the remote
+  `refs/heads/main` resolved to the same commit, and the working tree was clean
+  before this documentation update.
 - Verify the current tip with `git status -sb` and
   `git ls-remote --heads origin main`.
 - `plan.md` and `instructions.md` are preserved at the root unchanged.
