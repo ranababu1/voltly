@@ -1,0 +1,23 @@
+name: voltly
+description: "Battery intelligence, beautifully simple."
+publish_to: "none"
+
+# Version strategy: 0.x during pre-release development. The build number is
+# incremented for each distributed release candidate. Android versionCode is
+# derived from this value by Flutter.
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
