@@ -2,6 +2,62 @@
 
 Newest-first record of meaningful implementation changes.
 
+## 2026-10-20 — Phase 3 (in progress): charging-session domain and tracker
+
+**Milestone:** Phase 3 — Charging Sessions
+
+**Summary**
+
+- Added normalized `ChargingSession` and `TelemetrySample` domain models.
+  Sessions carry start/end/last-observed timestamps, nullable levels, lifecycle
+  state, sample count and explicit sampling-gap metadata. Samples retain the
+  original snapshot, so availability, provenance and timestamps are preserved.
+- Added a pure `ChargingSessionTracker` state machine that consumes real
+  telemetry snapshots and emits `started`, `sample` and `ended` updates without
+  performing I/O.
+- Session rules: charging starts a session; full or discharging completes it; a
+  persistent `not_charging` state ends it as interrupted after a two-minute
+  grace period; inter-sample gaps over five minutes mark the session partial.
+  A brief charging pause resumes the same session, and the restore path
+  continues an active session after restart while recording the gap.
+- Duplicate and out-of-order observation timestamps are ignored. Unavailable
+  levels remain null, unavailable charging state does not force an end, and no
+  zero or placeholder reading is fabricated.
+- Added 14 tracker tests and 2 sample-mapping tests covering start/continue,
+  full/discharging completion, short and persistent `not_charging`, duplicates,
+  sampling gaps, unavailable state and level, restart recovery and invalid
+  restore.
+- Bumped the version to `0.5.0+5`.
+
+**Key files**
+
+- `lib/core/sessions/charging_session.dart`
+- `lib/core/sessions/charging_session_tracker.dart`
+- `lib/core/sessions/telemetry_sample.dart`
+- `test/core/sessions/charging_session_tracker_test.dart`
+- `test/core/sessions/telemetry_sample_test.dart`
+- `test/support/session_fixtures.dart`
+
+**Verification**
+
+- `dart format lib test` — clean.
+- `flutter analyze` — no issues.
+- `flutter test` — 65/65 passed (49 existing + 16 new).
+- `.\gradlew.bat :app:testDebugUnitTest` — 13/13 Kotlin tests passed from the
+  last native change; no Kotlin code changed in this slice.
+- `flutter build apk --debug` — succeeded at `0.5.0+5`.
+- `flutter build apk --release` — succeeded (43.5 MB, debug certificate; not
+  distributable).
+
+**Known limitations**
+
+- Sessions are produced in memory only. Drift/SQLite persistence, retention and
+  history UI are not implemented yet.
+- The tracker is not yet wired to `TelemetryController` or any screen.
+- Physical-device telemetry and manual TalkBack validation remain pending.
+- Release signing, AAB generation, split-ABI artifacts and GitHub Releases
+  remain outstanding.
+
 ## 2026-10-20 — Phase 2 complete: lifecycle, motion and accessibility
 
 **Milestone:** Phase 2 — Dashboard and Visual System

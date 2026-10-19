@@ -6,11 +6,14 @@ Voltly is an Android-first battery-monitoring and charging-analytics app. It
 presents device-reported telemetry honestly, keeps history on the device, and
 never substitutes guessed or demo values for real readings.
 
-> **Status: Phase 2 — Dashboard (implemented).**
+> **Status: Phase 3 (in progress) — charging-session domain foundation.**
 > The dashboard renders live device telemetry with accessible semantics,
 > explicit availability/provenance/stale/error states, calculated battery-side
 > power, a reduce-motion-aware charging pulse, and background pause/resume of
-> acquisition. Physical-device and manual screen-reader validation remain
+> acquisition. A pure charging-session domain model and state machine now
+> classify real telemetry into sessions, tolerate short charging pauses, and
+> mark interrupted or gap-affected history honestly. Persistence is the next
+> increment. Physical-device and manual screen-reader validation remain
 > pending.
 
 ## Scope
@@ -18,8 +21,9 @@ never substitutes guessed or demo values for real readings.
 - Android 8.0+ (API 26), phone-first. No iOS target.
 - Local-first and offline. No accounts, backend, ads or analytics SDKs.
 - Dark-only, AMOLED-friendly surfaces with restrained mint accents.
-- Live telemetry, charging sessions, charts, estimates and alerts are planned
-  in later milestones. See `plan.md` for the authoritative scope.
+- Live telemetry is implemented. Session persistence, charts, estimates and
+  alerts are planned in later milestones. See `plan.md` for the authoritative
+  scope.
 
 ## Toolchain
 
@@ -62,16 +66,18 @@ cd ..
 flutter build apk --debug
 ```
 
-Last recorded results (2026-10-20, Phase 2 complete):
+Last recorded results (2026-10-20, Phase 3 session-domain slice):
 
 - `flutter analyze` — no issues.
-- `flutter test` — 49/49 passed (16 contract parsing, 7 power, 6 channel,
-  6 diagnostics, 9 dashboard, 2 lifecycle provider, 1 motion, 2 app/lifecycle).
+- `flutter test` — 65/65 passed (16 contract parsing, 7 power, 6 channel,
+  6 diagnostics, 9 dashboard, 2 lifecycle provider, 1 motion, 2 app/lifecycle,
+  14 session tracker, 2 session sample).
 - `.\gradlew.bat :app:testDebugUnitTest` — 13/13 Kotlin tests passed.
-- `flutter build apk --debug` — succeeded.
+- `flutter build apk --debug` — succeeded at version `0.5.0+5`.
 - `flutter build apk --release` — succeeded (43.5 MB, signed with the debug
   certificate; not distributable).
-- Debug APK installed and cold-launched on a Pixel 10a AVD (Android 17).
+- The Phase 2 emulator validation remains the last on-device UI validation.
+  Debug APK was installed and cold-launched on a Pixel 10a AVD (Android 17).
   Dashboard values matched `adb shell dumpsys battery`: 100%, "Not charging",
   5.00 V, 25.0 °C, 10.0 mAh and 4.50 W calculated.
 - Live update test: simulated `level 42`, `status 2` and `ac 1` via
@@ -103,6 +109,10 @@ lib/
       battery_telemetry_service.dart Platform-channel client
       telemetry_providers.dart      Riverpod service and autoDispose stream
       battery_power.dart            Calculated battery-side power
+    sessions/
+      charging_session.dart         Session lifecycle and coverage metadata
+      charging_session_tracker.dart Pure telemetry-to-session state machine
+      telemetry_sample.dart         Snapshot captured within a session
   features/
     dashboard/
       dashboard_screen.dart         Telemetry-driven dashboard
@@ -110,6 +120,7 @@ lib/
       telemetry_presentation.dart   Shared formatting, badges and freshness
 test/
   core/telemetry/                   Contract, power, channel and lifecycle tests
+  core/sessions/                    Session tracker and sample mapping tests
   features/dashboard/               Dashboard, diagnostics, motion and semantics
   support/                          Fixtures, fake service and app pump helper
   widget_test.dart                  App root, theme and lifecycle smoke tests
@@ -147,6 +158,13 @@ Feature directories are added only when a milestone needs them.
   unregisters; resume re-subscribes immediately. The retained observation keeps
   its original timestamp, so staleness remains honest. There is no polling or
   background service.
+- **Session domain:** a pure `ChargingSessionTracker` consumes real snapshots and
+  emits started/sample/ended updates. Charging starts a session; full or
+  discharging completes it; a persistent `not_charging` state becomes an
+  interrupted session after a two-minute grace period; inter-sample gaps over
+  five minutes mark the session partial. Duplicate/out-of-order timestamps are
+  ignored, unavailable levels stay null, and an unavailable charging state does
+  not fabricate an end. Restoration from persistence records the restart gap.
 - **Motion:** a small charging pulse runs only for the reported charging state
   and is disabled when the platform requests reduced motion. The adjacent text
   carries the meaning; motion is decorative.
@@ -155,8 +173,9 @@ Feature directories are added only when a milestone needs them.
   320×640 with 2× text; status is never communicated by color alone.
 - **Presentation:** dashboard and diagnostics share one formatting, badge and
   freshness layer so status language cannot drift between screens.
-- **Persistence:** Drift/SQLite is planned for session history, with explicit,
-  tested schema migrations. No database exists yet.
+- **Persistence:** session data is currently produced in memory only. Drift/SQLite
+  persistence with explicit, tested schema migrations is the next increment; no
+  database file exists or is committed yet.
 - **Charts and estimates:** deferred until real captured data exists. Estimates
   will be labeled and withheld when evidence is insufficient.
 
@@ -178,7 +197,7 @@ Feature directories are added only when a milestone needs them.
 ## Versioning
 
 `pubspec.yaml` uses semantic-style `MAJOR.MINOR.PATCH+BUILD`. The project is
-pre-1.0 during development (`0.4.0+4` now). Build numbers increment for each
+pre-1.0 during development (`0.5.0+5` now). Build numbers increment for each
 distributed release candidate. Tag and release conventions are defined in
 `instructions.md` §17.
 
@@ -202,8 +221,10 @@ distributed release candidate. Tag and release conventions are defined in
   labels are implemented. Manual TalkBack/screen-reader validation and
   physical-device testing remain pending.
 - The app is dark-only by design; no light theme is included.
-- Charging sessions, history, charts, alerts and health/capacity estimates are
-  not implemented yet (Phase 3+).
+- Charging-session classification exists as a pure, tested domain layer, but it
+  is not yet persisted, scheduled from the live controller, or shown in the UI.
+- Session history, charts, alerts and health/capacity estimates remain pending
+  (Phase 3+).
 - Average current, charge counter and other metrics are unsupported on some
   devices. The contract reports availability per metric; this is not a bug.
 - Release builds are currently signed with the Android debug certificate.
