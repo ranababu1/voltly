@@ -1,8 +1,8 @@
 # Current State
 
 **Last updated:** 2026-10-20
-**Milestone:** Phase 1 — Native Battery Telemetry (implemented; physical-device validation pending)
-**Project version:** `0.2.0+2` (versionCode 2)
+**Milestone:** Phase 2 — Dashboard (core implemented; polish, lifecycle and accessibility review pending)
+**Project version:** `0.3.0+3` (versionCode 3)
 
 ## Implemented and verified
 
@@ -11,25 +11,29 @@
 | Android Flutter app shell | Launchable, label `Voltly`, app ID `com.voltly` | Debug APK installed and launched on Pixel 10a AVD (Android 17); `Status: ok` |
 | Minimum platform | API 26 pinned in Gradle | APK `sdkVersion:'26'` |
 | Design tokens | AMOLED palette, spacing, radius, typography | `flutter analyze`; widget test asserts theme |
-| Dashboard shell | Branding, live-adapter status and diagnostics entry | Widget test + emulator UI hierarchy |
+| Dashboard shell | Branding, live dashboard, diagnostics entry | Widget test + emulator UI hierarchy |
+| Dashboard primary metrics | Device battery level, charging state, power source, progress and Live/Stale state | 8 dashboard widget tests + emulator |
+| Dashboard secondary metrics | Voltage, temperature, current, average current, charge counter and calculated power | 8 dashboard widget tests + emulator |
+| Dashboard states | Loading, error/retry, unsupported, unavailable, invalid, stale, level-unavailable | Widget tests; zero fallbacks asserted |
+| Shared telemetry UI | Formatting, badges, freshness timer used by dashboard and diagnostics | Both UI test suites |
 | Launch experience | Black window in light and dark system modes | Android resource review; emulator cold launch |
-| Large-text layout | Scrollable, no overflow at 320×640 and 2× text; diagnostics covered | Widget tests passed |
+| Large-text layout | Scrollable, no overflow at 320×640 and 2× text; dashboard and diagnostics covered | Widget tests passed |
 | Static checks | Format, analyze clean | `dart format`, `flutter analyze` |
 | Native telemetry adapter | 8 metrics, per-metric availability, no polling | Kotlin tests; debug APK build |
 | Native unit conversions | mV→V, tenths °C→°C, µA→A, µAh→mAh, sentinel handling | 13 Kotlin tests |
 | Dart telemetry contract | Strict parsing, zero-vs-unavailable, schema rejection | 16 Dart tests |
 | Calculated power | Battery-side watts with 2 s input skew rule | 7 Dart tests |
 | Channel client | MethodChannel snapshot, EventChannel stream, cancel handling | 6 Dart tests |
-| Riverpod state | ProviderScope, service provider, auto-dispose stream, retry disabled | 7 diagnostics UI tests |
+| Riverpod state | ProviderScope, service provider, auto-dispose stream, retry disabled | 8 dashboard + 6 diagnostics tests |
 | Diagnostics UI | Live values, availability/reason, provenance, timestamps, stale/error/loading states | Widget tests + emulator UI hierarchy |
-| End-to-end telemetry | Level, status, voltage, temperature, charge counter, calculated power | Emulator values matched `dumpsys battery` |
-| Automated tests | 39 Dart + 13 Kotlin | `flutter test` 39/39; Gradle 13/13 |
-| Android builds | Debug and release APKs build; release is debug-signed | `flutter build apk --debug`, `--release` succeeded |
+| End-to-end telemetry | Dashboard matched `dumpsys battery`; calculated power labeled | Pixel 10a AVD, Android 17 |
+| Automated tests | 44 Dart + 13 Kotlin | `flutter test` 44/44; Gradle 13/13 |
+| Android builds | Debug and release APKs build at version 0.3.0; release is debug-signed | `flutter build apk --debug`, `--release` succeeded; APK metadata checked |
 
-**Deliberately absent:** user-facing dashboard telemetry cards, charging
-sessions, charts, alerts and health/capacity estimates. The home screen shows no
-battery value rather than a fabricated one; real readings live only in the
-developer diagnostics view.
+**Deliberately absent:** charging sessions, charts, alerts, health/capacity
+estimates, a charging animation and a light theme. The dashboard shows only real
+device telemetry, explicit unavailable states and calculated power labeled as
+approximate.
 
 ## Architecture and data flow
 
@@ -46,7 +50,7 @@ TelemetrySnapshot (immutable, per-metric availability/provenance)
         ↓
 Riverpod service provider + auto-dispose StreamProvider
         ↓
-TelemetryDiagnosticsScreen (loading/live/stale/error states)
+DashboardScreen (primary/secondary metrics) + TelemetryDiagnosticsScreen
 ```
 
 - `lib/main.dart` sets the system UI overlay and runs `VoltlyApp`.
@@ -61,12 +65,15 @@ TelemetryDiagnosticsScreen (loading/live/stale/error states)
 - `lib/core/telemetry/telemetry_providers.dart` is the only state wiring:
   one service provider and one auto-dispose stream provider with automatic
   retry disabled so failures surface immediately.
-- `lib/features/dashboard/telemetry_diagnostics_screen.dart` subscribes while
-  open, shows every metric independently, and releases the native receiver when
-  closed. It also marks readings stale after five minutes and shows calculated
-  power separately.
-- `lib/features/dashboard/dashboard_screen.dart` remains presentation-only and
-  is not yet the Phase 2 dashboard.
+- `lib/features/dashboard/dashboard_screen.dart` consumes that provider and
+  renders the live primary/secondary metrics. It does not query channels or
+  Android APIs.
+- `lib/features/dashboard/telemetry_presentation.dart` holds shared formatting,
+  availability/provenance badges and the one-shot freshness timer.
+- `lib/features/dashboard/telemetry_diagnostics_screen.dart` uses the same
+  provider and presentation layer for contract-level diagnostics.
+- The native receiver is released when the last consuming screen closes. Pausing
+  the subscription while the app is backgrounded remains a Phase 2 follow-up.
 - `docs/telemetry-contract.md` is the authoritative channel/payload contract.
 - Planned persistence: Drift/SQLite with explicit migrations (Phase 3+).
 
@@ -92,11 +99,12 @@ flutter build apk --release
 flutter build apk --release --split-per-abi
 ```
 
-Last known results: format clean, analyze clean, 39/39 Dart tests passed,
-13/13 Kotlin tests passed, debug and release builds succeeded. End-to-end
-diagnostics on the Pixel 10a AVD (Android 17) matched `dumpsys battery`: 100%,
-"Not charging", 5.00 V, 25.0 °C, 10.0 mAh and 4.50 W calculated. `--split-per-abi`
-has not been run and is required for the arm64 release artifact.
+Last known results: format clean, analyze clean, 44/44 Dart tests passed,
+13/13 Kotlin tests passed, debug and release builds succeeded at version 0.3.0.
+The dashboard on the Pixel 10a AVD (Android 17) matched `dumpsys battery`:
+100%, "Not charging", "Not plugged in", 5.00 V, 25.0 °C, 10.0 mAh and
+4.50 W calculated. `--split-per-abi` has not been run and is required for the
+arm64 release artifact.
 
 ## Known issues and limitations
 
@@ -106,8 +114,10 @@ has not been run and is required for the arm64 release artifact.
 - The emulator reports 0.900 A while unplugged and "Not charging"; Voltly shows
   that device-reported value faithfully. The emulator's battery model is not a
   reference for hardware current semantics.
-- The user-facing dashboard is still Phase 2 work. The home screen intentionally
-  shows no readings; the diagnostics screen is developer-only.
+- The user-facing dashboard core is implemented. Pausing telemetry while the app
+  is backgrounded, a restrained charging animation and a full
+  screen-reader/accessibility review remain Phase 2 follow-ups.
+- The dashboard is dark-only by design; no light theme is included.
 - `currentAverage` and `chargeCounter` are unsupported on many devices; the
   contract reports this explicitly and no fallback estimate is invented.
 - Riverpod automatic retry is disabled for telemetry. A failed native channel
@@ -135,32 +145,33 @@ has not been run and is required for the arm64 release artifact.
 - Phase 1 diagnostics commit `89ee8e5` was pushed on 2026-10-20; the remote
   `refs/heads/main` resolved to the same commit, and the working tree was clean
   before this documentation update.
-- Verify the current tip with `git status -sb` and
+- The Phase 2 dashboard core is committed with this documentation update on
+  `main`. Verify the current tip with `git status -sb` and
   `git ls-remote --heads origin main`.
 - `plan.md` and `instructions.md` are preserved at the root unchanged.
 
 
 ## Next task
 
-**Phase 2 (increment 1) — telemetry-driven dashboard core.**
+**Phase 2 (increment 2) — lifecycle-aware updates, restrained charging motion
+and accessibility review.**
 
 Acceptance criteria:
 
-1. Replace the foundation notice with dashboard content bound to
-   `telemetrySnapshotProvider`. Every displayed value must come from the real
-   service; no hard-coded or demo readings.
-2. Give battery level, charging state and power source primary hierarchy, and
-   show voltage, temperature, current and calculated battery-side power when
-   available. Label calculated/approximate values distinctly.
-3. Preserve explicit loading, unsupported, unavailable, invalid, stale and
-   error states. Never render an unavailable metric as zero.
-4. Show observation time and stale status; keep the manual Retry path.
-5. Keep diagnostics reachable for development and remove any duplicate
-   telemetry acquisition path.
-6. Add widget tests with the fake service covering full, partial, low-capability,
-   stale, loading and error states at normal and 2× text sizes.
-7. Verify on the emulator, then run format, analyze, Dart and Kotlin tests, and
-   the debug build; update all three documents and push.
+1. Pause the telemetry subscription when the app becomes inactive/paused and
+   resume it on return, without losing the last snapshot or polling. Readings
+   age into stale state based on observation time, not on pause duration.
+2. Add a restrained charging animation that reflects only the reported charging
+   state, respects the platform reduce-motion setting, and never implies
+   unsupported precision.
+3. Review semantics, contrast and touch targets. Battery level, state, power
+   source, metric cards and calculated power need clear screen-reader labels;
+   status must never rely on color alone.
+4. Validate the dashboard and diagnostics at 320×640 with 2× text and at a second
+   screen size, including low-capability, stale and error states.
+5. Add tests for lifecycle pause/resume and motion behavior; run format,
+   analyze, Dart and Kotlin tests, and the debug build; verify on the emulator;
+   update all documents and push.
 
-Physical-device telemetry validation for Phase 1 remains outstanding and must
-be completed before hardware accuracy can be claimed.
+Physical-device telemetry validation for Phase 1 remains outstanding and must be
+completed before hardware accuracy can be claimed.

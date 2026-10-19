@@ -1,15 +1,12 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:voltly/app/theme/app_colors.dart';
 import 'package:voltly/app/theme/app_tokens.dart';
-import 'package:voltly/core/errors/telemetry_exception.dart';
 import 'package:voltly/core/telemetry/battery_power.dart';
 import 'package:voltly/core/telemetry/telemetry_models.dart';
 import 'package:voltly/core/telemetry/telemetry_providers.dart';
+import 'package:voltly/features/dashboard/telemetry_presentation.dart';
 
 /// Developer-only view of the live native telemetry contract.
 ///
@@ -111,7 +108,7 @@ class _ErrorState extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                _describeError(error),
+                describeTelemetryError(error),
                 style: textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
@@ -127,33 +124,6 @@ class _ErrorState extends StatelessWidget {
       ),
     );
   }
-}
-
-String _describeError(Object error) {
-  if (error is PlatformException) {
-    final String? message = error.message;
-    return message == null || message.isEmpty
-        ? error.code
-        : '${error.code}: $message';
-  }
-  if (error is TelemetryFormatException) return error.message;
-  return 'Could not read battery telemetry.';
-}
-
-String _formatDateTime(DateTime timestamp) {
-  final DateTime local = timestamp.toLocal();
-  final String date =
-      '${local.year.toString().padLeft(4, '0')}-'
-      '${local.month.toString().padLeft(2, '0')}-'
-      '${local.day.toString().padLeft(2, '0')}';
-  return '$date ${_formatTime(local)}';
-}
-
-String _formatTime(DateTime timestamp) {
-  final DateTime local = timestamp.toLocal();
-  return '${local.hour.toString().padLeft(2, '0')}:'
-      '${local.minute.toString().padLeft(2, '0')}:'
-      '${local.second.toString().padLeft(2, '0')}';
 }
 
 class _DiagnosticsBody extends StatelessWidget {
@@ -190,42 +160,50 @@ class _DiagnosticsBody extends StatelessWidget {
                 _ReadingRow(
                   label: 'Battery level',
                   reading: snapshot.batteryLevel,
-                  value: _formatBatteryLevel(snapshot.batteryLevel),
+                  value: formatTelemetryBatteryLevel(snapshot.batteryLevel),
                 ),
                 _ReadingRow(
                   label: 'Charging state',
                   reading: snapshot.chargingState,
-                  value: _formatChargingState(snapshot.chargingState),
+                  value: formatTelemetryChargingState(snapshot.chargingState),
                 ),
                 _ReadingRow(
                   label: 'Power source',
                   reading: snapshot.plugSource,
-                  value: _formatPlugSource(snapshot.plugSource),
+                  value: formatTelemetryPlugSource(snapshot.plugSource),
                 ),
                 _ReadingRow(
                   label: 'Voltage',
                   reading: snapshot.voltage,
-                  value: _formatNumeric(snapshot.voltage, 2, 'V'),
+                  value: formatTelemetryNumeric(snapshot.voltage, 2, 'V'),
                 ),
                 _ReadingRow(
                   label: 'Temperature',
                   reading: snapshot.temperature,
-                  value: _formatNumeric(snapshot.temperature, 1, '°C'),
+                  value: formatTelemetryNumeric(snapshot.temperature, 1, '°C'),
                 ),
                 _ReadingRow(
                   label: 'Current now',
                   reading: snapshot.currentNow,
-                  value: _formatNumeric(snapshot.currentNow, 3, 'A'),
+                  value: formatTelemetryNumeric(snapshot.currentNow, 3, 'A'),
                 ),
                 _ReadingRow(
                   label: 'Average current',
                   reading: snapshot.currentAverage,
-                  value: _formatNumeric(snapshot.currentAverage, 3, 'A'),
+                  value: formatTelemetryNumeric(
+                    snapshot.currentAverage,
+                    3,
+                    'A',
+                  ),
                 ),
                 _ReadingRow(
                   label: 'Charge counter',
                   reading: snapshot.chargeCounter,
-                  value: _formatNumeric(snapshot.chargeCounter, 1, 'mAh'),
+                  value: formatTelemetryNumeric(
+                    snapshot.chargeCounter,
+                    1,
+                    'mAh',
+                  ),
                 ),
               ],
             ),
@@ -243,41 +221,6 @@ class _DiagnosticsBody extends StatelessWidget {
       ),
     );
   }
-}
-
-String _formatNumeric(
-  TelemetryReading<double> reading,
-  int decimals,
-  String unit,
-) {
-  if (!reading.isAvailable) return 'Unavailable';
-  return '${reading.value!.toStringAsFixed(decimals)} $unit';
-}
-
-String _formatBatteryLevel(TelemetryReading<double> reading) {
-  if (!reading.isAvailable) return 'Unavailable';
-  return '${reading.value!.toStringAsFixed(0)}%';
-}
-
-String _formatChargingState(TelemetryReading<BatteryChargingState> reading) {
-  if (!reading.isAvailable) return 'Unavailable';
-  return switch (reading.value!) {
-    BatteryChargingState.charging => 'Charging',
-    BatteryChargingState.discharging => 'Discharging',
-    BatteryChargingState.notCharging => 'Not charging',
-    BatteryChargingState.full => 'Full',
-  };
-}
-
-String _formatPlugSource(TelemetryReading<BatteryPlugSource> reading) {
-  if (!reading.isAvailable) return 'Unavailable';
-  return switch (reading.value!) {
-    BatteryPlugSource.none => 'Not plugged in',
-    BatteryPlugSource.ac => 'AC',
-    BatteryPlugSource.usb => 'USB',
-    BatteryPlugSource.wireless => 'Wireless',
-    BatteryPlugSource.dock => 'Dock',
-  };
 }
 
 class _SnapshotHeader extends StatelessWidget {
@@ -331,16 +274,16 @@ class _SnapshotHeader extends StatelessWidget {
               runSpacing: AppSpacing.xs,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: <Widget>[
-                _Badge(
+                TelemetryBadge(
                   label: 'Schema v${snapshot.schemaVersion}',
                   color: AppColors.textSecondary,
                 ),
-                _FreshnessBadge(observedAt: snapshot.observedAt),
+                TelemetryFreshnessBadge(observedAt: snapshot.observedAt),
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Observed ${_formatDateTime(snapshot.observedAt)}',
+              'Observed ${formatTelemetryDateTime(snapshot.observedAt)}',
               style: textTheme.bodySmall,
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -355,65 +298,6 @@ class _SnapshotHeader extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _FreshnessBadge extends StatefulWidget {
-  const _FreshnessBadge({required this.observedAt});
-
-  final DateTime observedAt;
-
-  @override
-  State<_FreshnessBadge> createState() => _FreshnessBadgeState();
-}
-
-class _FreshnessBadgeState extends State<_FreshnessBadge> {
-  Timer? _staleTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _scheduleStaleUpdate();
-  }
-
-  @override
-  void didUpdateWidget(covariant _FreshnessBadge oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.observedAt != widget.observedAt) {
-      _staleTimer?.cancel();
-      _scheduleStaleUpdate();
-    }
-  }
-
-  @override
-  void dispose() {
-    _staleTimer?.cancel();
-    super.dispose();
-  }
-
-  void _scheduleStaleUpdate() {
-    final Duration remaining = widget.observedAt
-        .add(TelemetrySnapshot.staleAfter)
-        .difference(DateTime.now());
-    if (remaining <= Duration.zero) return;
-    _staleTimer = Timer(remaining + const Duration(seconds: 1), () {
-      if (!mounted) return;
-      setState(() {});
-      if (!_isStale) _scheduleStaleUpdate();
-    });
-  }
-
-  bool get _isStale =>
-      DateTime.now().difference(widget.observedAt) >
-      TelemetrySnapshot.staleAfter;
-
-  @override
-  Widget build(BuildContext context) {
-    final bool stale = _isStale;
-    return _Badge(
-      label: stale ? 'Stale' : 'Live',
-      color: stale ? AppColors.warning : AppColors.mint,
     );
   }
 }
@@ -505,16 +389,16 @@ class _ReadingRow extends StatelessWidget {
             runSpacing: AppSpacing.xxs,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
-              _Badge(
-                label: _availabilityLabel(reading.availability),
-                color: _availabilityColor(reading.availability),
+              TelemetryBadge(
+                label: telemetryAvailabilityLabel(reading.availability),
+                color: telemetryAvailabilityColor(reading.availability),
               ),
-              _Badge(
-                label: _sourceLabel(reading.source),
-                color: _sourceColor(reading.source),
+              TelemetryBadge(
+                label: telemetrySourceLabel(reading.source),
+                color: telemetrySourceColor(reading.source),
               ),
               Text(
-                'Observed ${_formatTime(reading.observedAt)}',
+                'Observed ${formatTelemetryTime(reading.observedAt)}',
                 style: textTheme.bodySmall,
               ),
             ],
@@ -528,36 +412,6 @@ class _ReadingRow extends StatelessWidget {
     );
   }
 }
-
-String _availabilityLabel(TelemetryAvailability availability) =>
-    switch (availability) {
-      TelemetryAvailability.available => 'Available',
-      TelemetryAvailability.unsupported => 'Unsupported',
-      TelemetryAvailability.temporarilyUnavailable => 'Unavailable',
-      TelemetryAvailability.invalid => 'Invalid',
-      TelemetryAvailability.stale => 'Stale',
-    };
-
-Color _availabilityColor(TelemetryAvailability availability) =>
-    switch (availability) {
-      TelemetryAvailability.available => AppColors.mint,
-      TelemetryAvailability.unsupported => AppColors.textTertiary,
-      TelemetryAvailability.temporarilyUnavailable => AppColors.warning,
-      TelemetryAvailability.invalid => AppColors.danger,
-      TelemetryAvailability.stale => AppColors.warning,
-    };
-
-String _sourceLabel(TelemetrySource source) => switch (source) {
-  TelemetrySource.device => 'Device',
-  TelemetrySource.calculated => 'Calculated',
-  TelemetrySource.estimated => 'Estimated',
-};
-
-Color _sourceColor(TelemetrySource source) => switch (source) {
-  TelemetrySource.device => AppColors.textSecondary,
-  TelemetrySource.calculated => AppColors.mint,
-  TelemetrySource.estimated => AppColors.warning,
-};
 
 class _PowerCard extends StatelessWidget {
   const _PowerCard({required this.power});
@@ -622,16 +476,16 @@ class _PowerCard extends StatelessWidget {
                   runSpacing: AppSpacing.xxs,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: <Widget>[
-                    _Badge(
-                      label: _sourceLabel(power.source),
-                      color: _sourceColor(power.source),
+                    TelemetryBadge(
+                      label: telemetrySourceLabel(power.source),
+                      color: telemetrySourceColor(power.source),
                     ),
-                    _Badge(
-                      label: _availabilityLabel(power.availability),
-                      color: _availabilityColor(power.availability),
+                    TelemetryBadge(
+                      label: telemetryAvailabilityLabel(power.availability),
+                      color: telemetryAvailabilityColor(power.availability),
                     ),
                     Text(
-                      'Observed ${_formatTime(power.observedAt)}',
+                      'Observed ${formatTelemetryTime(power.observedAt)}',
                       style: textTheme.bodySmall,
                     ),
                   ],
@@ -651,37 +505,6 @@ class _PowerCard extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  const _Badge({required this.label, required this.color});
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xs,
-        vertical: 3,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: AppRadius.pill,
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: color,
-          letterSpacing: 0.2,
-          fontWeight: FontWeight.w600,
-          height: 1.3,
-        ),
-      ),
     );
   }
 }

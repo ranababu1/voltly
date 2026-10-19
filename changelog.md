@@ -2,6 +2,62 @@
 
 Newest-first record of meaningful implementation changes.
 
+## 2026-10-20 — Phase 2 (in progress): telemetry-driven dashboard core
+
+**Milestone:** Phase 2 — Dashboard and Visual System
+
+**Summary**
+
+- Replaced the foundation notice with a dashboard bound to
+  `telemetrySnapshotProvider`. All displayed values come from the real
+  telemetry service.
+- Battery level, charging state and power source form the primary hierarchy,
+  with a level progress indicator, explicit Live/Stale state and a stale
+  warning.
+- Added secondary cards for voltage, temperature, current now, average current
+  and charge counter, plus a dedicated calculated battery-side power card.
+- Unsupported, temporarily unavailable, invalid and stale values are shown
+  explicitly with reasons. No unavailable metric is rendered as zero.
+- Added loading and error cards with a Retry action; telemetry errors still do
+  not auto-retry.
+- Extracted shared telemetry presentation (formatting, availability/provenance
+  badges and freshness timer) used by both the dashboard and diagnostics.
+  Added a `displayLarge` typography token for the primary battery percentage.
+- Added eight dashboard widget tests and a shared app-pump test helper;
+  refactored diagnostics tests to reuse the shared fixtures.
+- Bumped the version to `0.3.0+3`.
+
+**Verification**
+
+- `dart format --output=none --set-exit-if-changed lib test` — exit 0.
+- `flutter analyze` — no issues.
+- `flutter test` — 44/44 passed (16 contract, 7 power, 6 channel, 6
+  diagnostics, 8 dashboard, 1 app/theme).
+- `.\gradlew.bat :app:testDebugUnitTest` — 13/13 Kotlin tests passed.
+- `flutter build apk --debug` — succeeded.
+- `flutter build apk --release` — succeeded (43.3 MB, debug certificate; not
+  distributable).
+- APKs report versionName `0.3.0`, versionCode `3`, minSdk `26`, compile/target
+  SDK `36`. The release manifest has no `INTERNET` permission.
+- Installed and cold-launched the debug APK on a Pixel 10a AVD (Android 17).
+  Dashboard values matched `dumpsys battery`: 100%, "Not charging",
+  "Not plugged in", 5.00 V, 25.0 °C and 10.0 mAh. Calculated power showed
+  4.50 W and was labeled Calculated/approximate. No `AndroidRuntime` errors.
+- Dashboard and diagnostics text were captured through `uiautomator dump`;
+  no fabricated or zero-filled unavailable values were observed.
+
+**Known limitations**
+
+- Physical-device telemetry validation remains pending. Emulator values prove
+  the pipeline and UI, not hardware-specific sign, units or capability.
+- The emulator reports 0.900 A while unplugged and "Not charging"; Voltly shows
+  that device-reported value faithfully.
+- Restrained charging animation, pausing updates while backgrounded and a full
+  screen-reader/accessibility review remain Phase 2 follow-ups.
+- The dashboard is dark-only; no light theme is included.
+- Release signing, AAB generation and GitHub Release APK artifacts remain
+  outstanding for an approved release.
+
 ## 2026-10-20 — Phase 1 complete: real-service telemetry diagnostics
 
 **Milestone:** Phase 1 — Native Battery Telemetry

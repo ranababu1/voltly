@@ -10,6 +10,13 @@ import 'package:voltly/app/theme/app_colors.dart';
 /// legibility when the system text scale is increased.
 abstract final class AppTypography {
   static const TextTheme textTheme = TextTheme(
+    displayLarge: TextStyle(
+      fontSize: 56,
+      height: 1,
+      fontWeight: FontWeight.w600,
+      letterSpacing: -2.2,
+      color: AppColors.textPrimary,
+    ),
     displaySmall: TextStyle(
       fontSize: 40,
       height: 1.1,

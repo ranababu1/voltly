@@ -6,10 +6,11 @@ Voltly is an Android-first battery-monitoring and charging-analytics app. It
 presents device-reported telemetry honestly, keeps history on the device, and
 never substitutes guessed or demo values for real readings.
 
-> **Status: Phase 1 — Native battery telemetry (implemented).**
-> The Kotlin adapter, typed Dart contract and real-service diagnostics screen
-> are implemented. Live readings and calculated power were validated end-to-end
-> on an Android emulator; physical-device hardware validation remains pending.
+> **Status: Phase 2 — Dashboard (core implemented).**
+> The dashboard now renders live device telemetry, explicit availability and
+> provenance, stale/error/loading states and calculated battery-side power from
+> the single Phase 1 service. Validation so far is emulator-based; physical
+> hardware and the remaining Phase 2 polish/accessibility work are pending.
 
 ## Scope
 
@@ -60,17 +61,17 @@ cd ..
 flutter build apk --debug
 ```
 
-Last recorded results (2026-10-20, Phase 1):
+Last recorded results (2026-10-20, Phase 2 dashboard core):
 
 - `flutter analyze` — no issues.
-- `flutter test` — 39/39 passed (16 contract parsing, 7 power, 6 channel,
-  7 diagnostics UI, 3 foundation widget).
+- `flutter test` — 44/44 passed (16 contract parsing, 7 power, 6 channel,
+  6 diagnostics, 8 dashboard, 1 app/theme).
 - `.\gradlew.bat :app:testDebugUnitTest` — 13/13 Kotlin tests passed.
 - `flutter build apk --debug` — succeeded.
-- `flutter build apk --release` — succeeded (43.3 MB, signed with the debug
-  certificate; not distributable).
+- `flutter build apk --release` — succeeded (signed with the debug certificate;
+  not distributable).
 - Debug APK installed and cold-launched on a Pixel 10a AVD (Android 17).
-  Diagnostics matched `adb shell dumpsys battery`: level 100%, status
+  Dashboard values matched `adb shell dumpsys battery`: level 100%, status
   "Not charging", 5.00 V, 25.0 °C and a 10.0 mAh charge counter. Calculated
   battery-side power showed 4.50 W and was labeled Calculated/approximate.
   No Android runtime errors were logged.
@@ -98,13 +99,14 @@ lib/
       battery_power.dart            Calculated battery-side power
   features/
     dashboard/
-      dashboard_screen.dart         Foundation app shell
+      dashboard_screen.dart         Telemetry-driven dashboard
       telemetry_diagnostics_screen.dart  Real-service diagnostics UI
+      telemetry_presentation.dart   Shared formatting, badges and freshness
 test/
   core/telemetry/                   Contract, power and channel tests
-  features/dashboard/               Diagnostics UI and navigation tests
-  support/                          Payload fixtures and fake service
-  widget_test.dart                  Branding, theme and large-text tests
+  features/dashboard/               Dashboard and diagnostics widget tests
+  support/                          Fixtures, fake service and app pump helper
+  widget_test.dart                  App root and theme smoke test
 android/app/src/main/kotlin/com/voltly/
   MainActivity.kt                   Registers the telemetry channels
   telemetry/                        Reader, conversions and channel host
@@ -117,19 +119,27 @@ Feature directories are added only when a milestone needs them.
 ## Architecture decisions
 
 - **State management:** Riverpod (`flutter_riverpod` 3.4.3) with one service
-  provider and one auto-dispose stream provider. Automatic provider retry is
-  disabled so native failures surface immediately; the diagnostics screen
-  offers an explicit Retry. No competing pattern is used.
+  provider and one auto-dispose stream provider shared by the dashboard and
+  diagnostics. Automatic provider retry is disabled so native failures surface
+  immediately; both screens offer an explicit Retry. No competing pattern is
+  used.
 - **Telemetry boundary:** implemented. A single Kotlin reader acquires readings
   from `ACTION_BATTERY_CHANGED` and `BatteryManager`, converts units once and
   publishes a versioned contract through MethodChannel/EventChannel. The Dart
   service is the only client. See `docs/telemetry-contract.md`.
-- **Diagnostics:** the real-service diagnostics screen labels each metric's
-  availability, provenance and observation time, marks readings older than five
-  minutes stale, and displays calculated battery-side power separately.
+- **Dashboard:** renders live battery level, charging state, power source,
+  voltage, temperature, current, average current, charge counter and calculated
+  battery-side power. Availability, provenance, observation time and stale
+  state are visible; loading and error states replace the content without
+  inventing values.
+- **Diagnostics:** the developer screen exposes the full contract, per-metric
+  timestamps and reasons for validation.
 - **Sampling:** the native receiver exists only while Dart is subscribed, so
   there is no polling and no background service. Riverpod auto-disposes the
-  subscription when the diagnostics screen closes.
+  subscription when the last consuming screen closes; pausing on app
+  backgrounding remains a Phase 2 follow-up.
+- **Presentation:** dashboard and diagnostics share one formatting, badge and
+  freshness layer so status language cannot drift between screens.
 - **Persistence:** Drift/SQLite is planned for session history, with explicit,
   tested schema migrations. No database exists yet.
 - **Charts and estimates:** deferred until real captured data exists. Estimates
@@ -153,7 +163,7 @@ Feature directories are added only when a milestone needs them.
 ## Versioning
 
 `pubspec.yaml` uses semantic-style `MAJOR.MINOR.PATCH+BUILD`. The project is
-pre-1.0 during development (`0.2.0+2` now). Build numbers increment for each
+pre-1.0 during development (`0.3.0+3` now). Build numbers increment for each
 distributed release candidate. Tag and release conventions are defined in
 `instructions.md` §17.
 
@@ -173,10 +183,12 @@ distributed release candidate. Tag and release conventions are defined in
 - The emulator reports 0.900 A while unplugged and "Not charging"; Voltly shows
   that device-reported value faithfully. This validates the pipeline, not the
   hardware sign convention.
+- The dashboard core is implemented. A restrained charging animation, pausing
+  updates when the app is backgrounded, and a full screen-reader/accessibility
+  review remain Phase 2 follow-ups.
+- The app is dark-only by design; no light theme is included.
 - Average current, charge counter and other metrics are unsupported on some
   devices. The contract reports availability per metric; this is not a bug.
-- The dashboard still shows no telemetry; only the developer diagnostics screen
-  does. Phase 2 is the user-facing dashboard milestone.
 - Release builds are currently signed with the Android debug certificate.
   Approved release signing credentials must be configured outside source
   control before any distribution.

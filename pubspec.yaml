@@ -5,7 +5,7 @@ publish_to: "none"
 # Version strategy: 0.x during pre-release development. The build number is
 # incremented for each distributed release candidate. Android versionCode is
 # derived from this value by Flutter.
-version: 0.2.0+2
+version: 0.3.0+3
 
 environment:
   sdk: ^3.13.5

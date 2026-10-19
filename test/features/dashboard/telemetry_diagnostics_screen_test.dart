@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:voltly/app/app.dart';
 import 'package:voltly/app/theme/app_theme.dart';
 import 'package:voltly/core/telemetry/telemetry_models.dart';
 import 'package:voltly/core/telemetry/telemetry_providers.dart';
@@ -33,13 +32,6 @@ void main() {
       await fake.dispose();
     });
     return fake;
-  }
-
-  TelemetrySnapshot snapshotAt(DateTime time) {
-    final int millis = time.toUtc().millisecondsSinceEpoch;
-    return TelemetrySnapshot.fromPlatformPayload(
-      telemetryPayload(observedAtMillis: millis),
-    );
   }
 
   testWidgets('shows a loading state until the first reading arrives', (
@@ -160,30 +152,5 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Developer diagnostics'), findsOneWidget);
     expect(find.text('Battery-side power'), findsOneWidget);
-  });
-
-  testWidgets('opens telemetry diagnostics from the dashboard', (
-    WidgetTester tester,
-  ) async {
-    final FakeBatteryTelemetryService fake = FakeBatteryTelemetryService();
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [batteryTelemetryServiceProvider.overrideWithValue(fake)],
-        child: const VoltlyApp(),
-      ),
-    );
-    addTearDown(() async {
-      await tester.pumpWidget(const SizedBox.shrink());
-      await fake.dispose();
-    });
-
-    await tester.ensureVisible(find.text('Open telemetry diagnostics'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Open telemetry diagnostics'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    expect(find.text('Telemetry diagnostics'), findsOneWidget);
-    expect(find.text('Waiting for a battery reading…'), findsOneWidget);
   });
 }

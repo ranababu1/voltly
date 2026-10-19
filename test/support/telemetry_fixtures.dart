@@ -85,3 +85,9 @@ Map<String, Object?> telemetryPayload({
 
 TelemetrySnapshot parseFixture([Map<String, Object?>? payload]) =>
     TelemetrySnapshot.fromPlatformPayload(payload ?? telemetryPayload());
+
+/// Snapshot whose observation time is [time], with every metric available.
+TelemetrySnapshot snapshotAt(DateTime time) =>
+    TelemetrySnapshot.fromPlatformPayload(
+      telemetryPayload(observedAtMillis: time.toUtc().millisecondsSinceEpoch),
+    );

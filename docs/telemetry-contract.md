@@ -2,8 +2,8 @@
 
 Status: implemented in the Kotlin adapter and typed Dart client, and validated
 end-to-end on an Android emulator. Physical-device validation is pending. The
-developer diagnostics screen is the current UI client; the Phase 2 dashboard
-will consume the same contract.
+telemetry dashboard and developer diagnostics screen are the current UI clients;
+both consume this same contract.
 
 This is the authoritative description of the Android-to-Dart battery telemetry
 boundary. The Kotlin `BatteryTelemetryReader` is the single acquisition source.
