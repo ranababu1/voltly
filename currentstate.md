@@ -132,8 +132,10 @@ has not been run and is required for the arm64 release artifact.
   `## main...origin/main` with a clean tree.
 - Phase 1 adapter commit `e230514` was pushed and verified against
   `origin/main`.
-- The Phase 1 diagnostics increment is committed with this documentation
-  update on `main`. Verify the current tip with `git status -sb` and
+- Phase 1 diagnostics commit `89ee8e5` was pushed on 2026-10-20; the remote
+  `refs/heads/main` resolved to the same commit, and the working tree was clean
+  before this documentation update.
+- Verify the current tip with `git status -sb` and
   `git ls-remote --heads origin main`.
 - `plan.md` and `instructions.md` are preserved at the root unchanged.
 
