@@ -74,12 +74,15 @@ required for the arm64 release artifact at release time.
 
 ## Git
 
-- Branch: `main`
+- Branch: `main`, tracking `origin/main`.
 - Remote: `origin` → `https://github.com/ranababu1/voltly.git`
-- The repository was initialized during Phase 0. `plan.md` and
-  `instructions.md` are preserved at the root unchanged.
-- Push status must be verified with `git status -sb` and `git ls-remote origin`
-  before it is reported as published.
+- Initial Phase 0 commit `efdce6b` was pushed on 2026-10-19. The remote
+  `refs/heads/main` resolved to the same commit, and `git status -sb` reported
+  `## main...origin/main` with a clean tree.
+- `plan.md` and `instructions.md` are preserved at the root unchanged.
+- Later documentation updates are committed separately. Verify the current tip
+  with `git status -sb` and `git ls-remote --heads origin main`.
+
 
 ## Next task
 
