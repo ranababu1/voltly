@@ -2,6 +2,77 @@
 
 Newest-first record of meaningful implementation changes.
 
+## 2026-10-20 — Phase 3 (in progress): Drift schema v1 and session repository
+
+**Milestone:** Phase 3 — Charging Sessions
+
+**Summary**
+
+- Added Drift 2.35.2 with SQLite 3.5.2 native assets. Removed the obsolete
+  `sqlite3_flutter_libs` package; SQLite is now bundled through Dart hooks.
+- Added schema v1 with `charging_sessions` and `telemetry_samples`. Session rows
+  preserve lifecycle state, nullable levels, last observation, sample count,
+  gap metadata and a distinct `samples_pruned` flag. Sample rows preserve every
+  stored metric, plug source, calculated power, contract version and JSON
+  availability/provenance metadata.
+- Added four indexes: recent/retention ordering, active lookup, ordered sample
+  retrieval plus duplicate protection (unique), and sample-time maintenance.
+  Foreign keys are enabled per connection and session deletion cascades to
+  samples. Level range and non-negative-count checks are enforced in SQLite.
+- Added a transactional repository that inserts a session with its first sample,
+  updates summaries with subsequent samples, ignores duplicate sample timestamps,
+  rolls back missing-session writes, recovers the active session after restart,
+  reconciles duplicate active rows, enforces retention and supports delete-all.
+- Retention defaults: 100 ended sessions, 180 days, 720 samples per session.
+  Active sessions are exempt from age/count bounds but their sample rows are
+  capped. Pruning marks `samples_pruned` without pretending a telemetry gap
+  occurred.
+- Added a stored-row mapper that rebuilds typed samples and renders missing or
+  malformed metadata as invalid readings rather than inventing values.
+- Added 13 persistence tests covering schema/index/foreign-key creation,
+  round-trip sample mapping, transactions and rollback, unavailable metrics,
+  duplicate samples, duplicate active recovery, file-backed restart, retention
+  by count and age, sample pruning, delete-all and newer-schema rejection.
+- Documented the schema and retention policy in `docs/persistence.md`.
+- Bumped the version to `0.6.0+6`.
+
+**Key files**
+
+- `lib/core/persistence/app_database.dart` and generated `app_database.g.dart`
+- `lib/core/persistence/tables.dart`
+- `lib/core/persistence/session_repository.dart`
+- `lib/core/persistence/session_retention_policy.dart`
+- `lib/core/persistence/sample_metadata.dart`
+- `lib/core/persistence/sample_mapper.dart`
+- `test/core/persistence/session_repository_test.dart`
+- `docs/persistence.md`
+
+**Verification**
+
+- `dart format lib test` — clean.
+- `flutter analyze` — no issues.
+- `flutter test` — 78/78 passed (65 existing + 13 persistence).
+- `.\gradlew.bat :app:testDebugUnitTest --rerun-tasks` — 13/13 Kotlin tests
+  passed; native code was unchanged.
+- `flutter build apk --debug` — succeeded at `0.6.0+6`.
+- `flutter build apk --release` — succeeded (48.9 MB, debug certificate; not
+  distributable). APK contains `libsqlite3.so` for arm64-v8a, armeabi-v7a and
+  x86_64, and no `INTERNET` permission.
+- File-backed persistence was closed and reopened in tests; stored sessions and
+  samples survived, and a database with `user_version = 2` was rejected.
+
+**Known limitations**
+
+- The tracker and repository are not yet wired to live acquisition or UI. The
+  running app does not create a production database file yet.
+- Session list/detail views and charts are not implemented.
+- No v2 migration exists yet; the newer-schema guard is tested, but future
+  upgrades must add explicit migrations.
+- The planned `app_settings` table is deferred until settings exist.
+- Physical-device telemetry and manual TalkBack validation remain pending.
+- Release signing, AAB generation, split-ABI artifacts and GitHub Releases
+  remain outstanding.
+
 ## 2026-10-20 — Phase 3 (in progress): charging-session domain and tracker
 
 **Milestone:** Phase 3 — Charging Sessions

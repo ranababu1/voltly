@@ -27,6 +27,7 @@ class ChargingSession {
     this.sampleCount = 0,
     this.maxSamplingGap,
     this.hasSamplingGaps = false,
+    this.samplesPruned = false,
   }) : assert(sampleCount >= 0, 'sampleCount cannot be negative'),
        assert(
          startLevelPercent == null ||
@@ -57,6 +58,11 @@ class ChargingSession {
 
   /// True when at least one inter-sample gap exceeded the configured threshold.
   final bool hasSamplingGaps;
+
+  /// True when repository retention removed older sample rows from this
+  /// session. This is distinct from a telemetry sampling gap: the summary is
+  /// still valid, but the stored sample list is not complete.
+  final bool samplesPruned;
 
   bool get isActive => state == ChargingSessionState.active;
 
@@ -89,6 +95,7 @@ class ChargingSession {
     int? sampleCount,
     Duration? maxSamplingGap,
     bool? hasSamplingGaps,
+    bool? samplesPruned,
   }) {
     return ChargingSession(
       id: id ?? this.id,
@@ -101,11 +108,13 @@ class ChargingSession {
       sampleCount: sampleCount ?? this.sampleCount,
       maxSamplingGap: maxSamplingGap ?? this.maxSamplingGap,
       hasSamplingGaps: hasSamplingGaps ?? this.hasSamplingGaps,
+      samplesPruned: samplesPruned ?? this.samplesPruned,
     );
   }
 
   @override
   String toString() =>
       'ChargingSession(id: $id, state: ${state.name}, startedAt: $startedAt, '
-      'endedAt: $endedAt, samples: $sampleCount, gaps: $hasSamplingGaps)';
+      'endedAt: $endedAt, samples: $sampleCount, gaps: $hasSamplingGaps, '
+      'pruned: $samplesPruned)';
 }
