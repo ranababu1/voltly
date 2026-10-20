@@ -216,6 +216,12 @@ for the arm64 release artifact.
 - Phase 3 persistence commit `a19b636` was pushed on 2026-10-20; the remote
   `refs/heads/main` resolved to the same commit, and the working tree was clean
   before this documentation update.
+- Release signing commit `16474bd` and build-ignore commit `6e1d02a` were pushed
+  on 2026-10-20. Annotated tag `v0.6.0` points at `6e1d02a`; the tag was pushed.
+- Release workflow commit `1fd7156` was pushed after the first release. The
+  workflow is active and will handle future `v*` tags.
+- GitHub Release `v0.6.0` is a pre-release with both signed APK assets. Both
+  assets were downloaded again and their SHA-256 hashes matched.
 - Verify the current tip with `git status -sb` and
   `git ls-remote --heads origin main`.
 - `plan.md` and `instructions.md` are preserved at the root unchanged.
