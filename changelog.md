@@ -24,6 +24,9 @@ Newest-first record of meaningful implementation changes.
   - Universal: `C24C0B647504F42695E2376A64FBCBBC3F115BDE21DAFF1085EBF84F4BB2FC97`
   - arm64: `AD2DACF4A90773E9DAEC564A5806AFF465D746D5FB110F73246150BE644627E6`
 - Added `docs/release.md` documenting signing, naming, verification and safety.
+- Added a tag-triggered GitHub Actions workflow for future releases. It builds,
+  tests, signs, verifies and publishes both APKs; `v0.6.0` itself was published
+  manually.
 
 **Verification**
 

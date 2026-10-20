@@ -14,6 +14,10 @@
   `54:3D:C7:A8:C3:D4:E3:3D:63:E8:18:0F:09:1F:2A:BD:07:9D:10:2D:3E:32:E8:71:50:38:8F:04:FE:34:D6:41`
 - Marked pre-release because session history UI and physical-device validation
   are still pending.
+- Both uploaded assets were downloaded again and their SHA-256 hashes matched
+  the local signed builds.
+- A tag-triggered release workflow (`.github/workflows/release.yml`) is added for
+  future `v*` tags; `v0.6.0` was published manually before that workflow existed.
 
 ## Implemented and verified
 

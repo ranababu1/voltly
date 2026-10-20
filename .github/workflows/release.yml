@@ -1,0 +1,116 @@
+name: Release
+
+# Tag-triggered signed release:
+#   git tag -a v0.7.0 -m "Voltly v0.7.0"
+#   git push origin v0.7.0
+#
+# Publishes two APK assets:
+#   Voltly-v0.7.0-universal.apk
+#   Voltly-v0.7.0-arm64-v8a.apk
+#
+# Requires four repository secrets:
+#   ANDROID_KEYSTORE_BASE64
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_ALIAS
+#   ANDROID_KEY_PASSWORD
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: dart run build_runner build
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze
+      - run: flutter test
+
+      - name: Kotlin unit tests
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:testDebugUnitTest --console=plain
+
+      - name: Materialize release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || { echo 'Missing ANDROID_KEYSTORE_BASE64' >&2; exit 1; }
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+          cat > android/key.properties <<EOF
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=upload-keystore.jks
+          EOF
+
+      - name: Build, verify and stage signed APKs
+        run: |
+          set -euo pipefail
+          VERSION="$(sed -nE 's/^version: ([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+).*$/\1/p' pubspec.yaml)"
+          test -n "$VERSION" || { echo 'Could not read version from pubspec.yaml' >&2; exit 1; }
+          test "v$VERSION" = "$GITHUB_REF_NAME" || {
+            echo "Tag $GITHUB_REF_NAME does not match pubspec version v$VERSION" >&2
+            exit 1
+          }
+
+          flutter build apk --release
+          flutter build apk --release --split-per-abi --target-platform android-arm64
+
+          mkdir -p release-assets
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "release-assets/Voltly-v${VERSION}-universal.apk"
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+            "release-assets/Voltly-v${VERSION}-arm64-v8a.apk"
+
+          cat > release-assets/download-guide.md <<EOF
+          ### Which file should I download?
+
+          - \`Voltly-v${VERSION}-arm64-v8a.apk\` — most modern phones (2018+), smallest
+          - \`Voltly-v${VERSION}-universal.apk\` — any compatible Android 8.0+ device
+          EOF
+
+          APKSIGNER="$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools" -type f -name apksigner | sort -V | tail -n1)"
+          test -n "$APKSIGNER" || { echo 'apksigner not found' >&2; exit 1; }
+          for apk in release-assets/*.apk; do
+            "$APKSIGNER" verify --print-certs "$apk"
+            if "$APKSIGNER" verify --print-certs "$apk" | grep -q 'CN=Android Debug'; then
+              echo "$apk is debug-signed" >&2
+              exit 1
+            fi
+          done
+
+          ls -l release-assets
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: release-assets/*.apk
+          body_path: release-assets/download-guide.md
+          append_body: true

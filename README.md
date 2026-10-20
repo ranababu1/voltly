@@ -69,7 +69,8 @@ flutter run
   [GitHub Release](https://github.com/ranababu1/voltly/releases/tag/v0.6.0)
 
 Release assets are signed with the Voltly production key. See
-`docs/release.md` for signing, verification and publication rules.
+`docs/release.md` for signing, verification and publication rules. Future `v*`
+tags use `.github/workflows/release.yml` to build and publish both APKs.
 
 ## Verification
 
