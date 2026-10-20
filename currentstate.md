@@ -4,6 +4,17 @@
 **Milestone:** Phase 3 — Charging Sessions (in progress; domain and persistence foundations complete, live integration/UI pending)
 **Project version:** `0.6.0+6` (versionCode 6)
 
+## Release
+
+- Tag: `v0.6.0` (pre-release)
+- Release: https://github.com/ranababu1/voltly/releases/tag/v0.6.0
+- Assets: `Voltly-v0.6.0-universal.apk` (48.9 MB) and
+  `Voltly-v0.6.0-arm64-v8a.apk` (17.0 MB)
+- Signing certificate SHA-256:
+  `54:3D:C7:A8:C3:D4:E3:3D:63:E8:18:0F:09:1F:2A:BD:07:9D:10:2D:3E:32:E8:71:50:38:8F:04:FE:34:D6:41`
+- Marked pre-release because session history UI and physical-device validation
+  are still pending.
+
 ## Implemented and verified
 
 | Area | State | Verification |
@@ -26,6 +37,8 @@
 | Local persistence | Drift schema v1, indexes, foreign keys, nullable values, availability/provenance metadata | 13 persistence tests; schema inspection |
 | Transactional repository | Atomic session/sample writes, duplicate handling, restart recovery, duplicate-active reconciliation, delete-all | Repository tests |
 | Retention | 100 ended sessions, 180 days, 720 samples/session; active sessions retained; pruning flagged honestly | Retention/cap tests |
+| Release signing | Dedicated Voltly key outside repo; four GitHub Actions secrets; release build verified with `apksigner` | Certificate SHA-256 and package/version/ABI checks |
+| GitHub release | `v0.6.0` pre-release with universal + arm64 APKs | Uploaded asset download and hash verification |
 | Static checks | Format, analyze clean | `dart format`, `flutter analyze` |
 | Native telemetry adapter | 8 metrics, per-metric availability, no polling | Kotlin tests; debug APK build |
 | Native unit conversions | mV→V, tenths °C→°C, µA→A, µAh→mAh, sentinel handling | 13 Kotlin tests |
@@ -36,7 +49,7 @@
 | Diagnostics UI | Live values, availability/reason, provenance, timestamps, stale/error/loading states | Widget tests + emulator UI hierarchy |
 | End-to-end telemetry | Dashboard matched `dumpsys`; live simulated update to 42%/Charging/AC; resume retained data | Pixel 10a AVD, Android 17 |
 | Automated tests | 78 Dart + 13 Kotlin | `flutter test` 78/78; Gradle 13/13 |
-| Android builds | Debug and release APKs build at version 0.6.0; release is debug-signed and bundles SQLite for three ABIs | `flutter build apk --debug`, `--release` succeeded; APK metadata checked |
+| Android builds | Debug and release APKs build at version 0.6.0; release is production-signed and bundles SQLite for three ABIs | Debug/release builds; `apksigner`; APK metadata checked |
 
 **Deliberately absent:** live session wiring, session history/detail UI, charts,
 alerts, health/capacity estimates and a light theme. The dashboard still shows
@@ -162,13 +175,15 @@ for the arm64 release artifact.
   contract reports this explicitly and no fallback estimate is invented.
 - Riverpod automatic retry is disabled for telemetry. A failed native channel
   shows an explicit error and requires manual Retry.
-- Release signing is not configured; release APKs use the Android debug
-  certificate. Distribution is blocked until production signing is set up
-  outside source control.
-- No AAB is configured or built.
-- No release or GitHub Release has been published. `instructions.md` §17.1
-  requires signed universal and arm64 APKs for an approved release; that
-  workflow has not been executed.
+- Release signing is configured with a dedicated Voltly key outside source
+  control and the four GitHub Actions secrets. The key and credentials must be
+  backed up; losing them prevents updating an installed release.
+- `v0.6.0` is published as a pre-release. Session history UI and physical-device
+  telemetry/TalkBack validation remain pending, so it is not a stable release.
+- No AAB is configured or built. GitHub Releases currently use the two signed
+  APKs required by `instructions.md` §17.1.
+- The arm64 APK was signature/ABI-checked but could not be installed on the
+  x86_64 emulator used for the universal APK smoke test.
 - The Gradle build emits an SDK XML version warning (installed tooling is newer
   than a component expects). It did not affect the build; resolve during a
   deliberate toolchain update, not opportunistically.

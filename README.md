@@ -15,6 +15,10 @@ never substitutes guessed or demo values for real readings.
 > schema v1, recovery and bounded retention. Live wiring and session history UI
 > are the next increment. Physical-device and manual screen-reader validation
 > remain pending.
+>
+> **First signed preview:** `v0.6.0` is published with universal and
+> `arm64-v8a` APKs. It is marked as a pre-release because session history UI and
+> physical-device validation are still pending.
 
 ## Scope
 
@@ -58,6 +62,15 @@ flutter pub get
 flutter run
 ```
 
+## Releases
+
+- **v0.6.0 (pre-release):** `Voltly-v0.6.0-universal.apk` and
+  `Voltly-v0.6.0-arm64-v8a.apk`.
+  [GitHub Release](https://github.com/ranababu1/voltly/releases/tag/v0.6.0)
+
+Release assets are signed with the Voltly production key. See
+`docs/release.md` for signing, verification and publication rules.
+
 ## Verification
 
 ```powershell
@@ -87,6 +100,13 @@ Last recorded results (2026-10-20, Phase 3 persistence slice):
   unavailable-value mapping, duplicate samples, duplicate active recovery,
   file-backed restart, retention bounds, sample pruning, delete-all and
   newer-schema rejection.
+- Release APKs are signed with `CN=Voltly Release, O=Voltly, C=US`; SHA-256
+  `54:3D:C7:A8:C3:D4:E3:3D:63:E8:18:0F:09:1F:2A:BD:07:9D:10:2D:3E:32:E8:71:50:38:8F:04:FE:34:D6:41`.
+  Universal is 48.9 MB; arm64 is 17.0 MB.
+- The universal signed APK was installed on the Pixel 10a AVD, cold-launched as
+  version `0.6.0`, and showed live dashboard values. The arm64 APK was built,
+  signature-checked and ABI-checked, but cannot be installed on the x86_64
+  emulator.
 - The Phase 2 emulator validation remains the last on-device UI validation.
   Debug APK was installed and cold-launched on a Pixel 10a AVD (Android 17).
   Dashboard values matched `adb shell dumpsys battery`: 100%, "Not charging",
@@ -222,8 +242,8 @@ Feature directories are added only when a milestone needs them.
 
 `pubspec.yaml` uses semantic-style `MAJOR.MINOR.PATCH+BUILD`. The project is
 pre-1.0 during development (`0.6.0+6` now). Build numbers increment for each
-distributed release candidate. Tag and release conventions are defined in
-`instructions.md` §17.
+distributed release candidate. The first signed preview tag is `v0.6.0`.
+Tag and release conventions are defined in `instructions.md` §17.
 
 ## Documentation
 
@@ -231,6 +251,7 @@ distributed release candidate. Tag and release conventions are defined in
 - `instructions.md` — engineering, testing, Git and release rules.
 - `docs/telemetry-contract.md` — versioned native/Dart telemetry contract.
 - `docs/persistence.md` — schema v1, transactions, recovery and retention policy.
+- `docs/release.md` — signing, APK naming, verification and release safety.
 - `changelog.md` — chronological record of meaningful changes.
 - `currentstate.md` — factual snapshot, blockers and the next task.
 
@@ -253,8 +274,9 @@ distributed release candidate. Tag and release conventions are defined in
   pending (Phase 3+).
 - Average current, charge counter and other metrics are unsupported on some
   devices. The contract reports availability per metric; this is not a bug.
-- Release builds are currently signed with the Android debug certificate.
-  Approved release signing credentials must be configured outside source
-  control before any distribution.
-- No release or GitHub Release has been created; the required universal and
-  arm64 release APKs belong to a future approved release milestone.
+- Release signing is configured with a dedicated Voltly key stored outside
+  source control. The four signing values are also repository Actions secrets.
+  Loss of the key/credentials would prevent updates over an installed release.
+- `v0.6.0` is a signed pre-release because session history UI and
+  physical-device validation are still pending. A stable release requires the
+  remaining release checks.

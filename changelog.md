@@ -2,6 +2,49 @@
 
 Newest-first record of meaningful implementation changes.
 
+## 2026-10-20 — v0.6.0 signed preview release
+
+**Milestone:** Phase 3 — Charging Sessions (preview release)
+
+**Summary**
+
+- Configured production release signing from `android/key.properties` with the
+  keystore and passwords kept outside version control. Added the corresponding
+  four GitHub Actions secrets.
+- Built signed **universal** and **arm64-v8a** release APKs from version
+  `0.6.0+6`.
+- Published GitHub Release `v0.6.0` as a **pre-release** because session history
+  UI and physical-device validation are still pending.
+- Release assets:
+  - `Voltly-v0.6.0-universal.apk` — 48.9 MB, versionCode 6
+  - `Voltly-v0.6.0-arm64-v8a.apk` — 17.0 MB, versionCode 2006
+- Signing certificate: `CN=Voltly Release, O=Voltly, C=US`, SHA-256
+  `54:3D:C7:A8:C3:D4:E3:3D:63:E8:18:0F:09:1F:2A:BD:07:9D:10:2D:3E:32:E8:71:50:38:8F:04:FE:34:D6:41`.
+- Asset SHA-256:
+  - Universal: `C24C0B647504F42695E2376A64FBCBBC3F115BDE21DAFF1085EBF84F4BB2FC97`
+  - arm64: `AD2DACF4A90773E9DAEC564A5806AFF465D746D5FB110F73246150BE644627E6`
+- Added `docs/release.md` documenting signing, naming, verification and safety.
+
+**Verification**
+
+- `flutter analyze` — no issues; `flutter test` — 78/78 passed.
+- `.\gradlew.bat :app:testDebugUnitTest --rerun-tasks` — 13/13 passed.
+- `apksigner verify --print-certs` confirmed the production certificate on both
+  APKs; universal reports package `com.voltly`, versionName `0.6.0`,
+  versionCode `6`, ABIs arm64-v8a/armeabi-v7a/x86_64; arm64 reports only
+  arm64-v8a.
+- Universal APK installed and cold-launched on the Pixel 10a AVD (Android 17);
+  dashboard showed live values. arm64 could not be installed on the x86_64
+  emulator.
+- GitHub Release upload verified; assets downloaded again and hashes checked.
+
+**Known limitations**
+
+- Pre-release only: session history/detail UI and charts are not implemented.
+- Physical-device telemetry and manual TalkBack validation remain pending.
+- The signing keystore and credentials must be backed up outside the repository.
+- No AAB is built.
+
 ## 2026-10-20 — Phase 3 (in progress): Drift schema v1 and session repository
 
 **Milestone:** Phase 3 — Charging Sessions
