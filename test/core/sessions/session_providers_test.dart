@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:voltly/core/persistence/persistence_providers.dart';
+import 'package:voltly/core/sessions/battery_time_estimate.dart';
 import 'package:voltly/core/sessions/charging_session.dart';
 import 'package:voltly/core/sessions/session_detail.dart';
 import 'package:voltly/core/sessions/session_providers.dart';
@@ -165,5 +166,50 @@ void main() {
     expect(detail.samples.single.sessionId, 7);
 
     expect(await container.read(sessionDetailProvider(999).future), isNull);
+  });
+
+  test('has no active estimate when no session is active', () async {
+    container.read(sessionTrackingProvider);
+    await pumpEventQueue();
+
+    expect(await container.read(activeSessionEstimateProvider.future), isNull);
+  });
+
+  test('calculates an active estimate from stored session samples', () async {
+    final DateTime now = DateTime.now().toUtc();
+    store.sessions[7] = ChargingSession(
+      id: 7,
+      startedAt: now.subtract(const Duration(minutes: 10)),
+      lastObservedAt: now,
+      startLevelPercent: 40,
+      state: ChargingSessionState.active,
+      sampleCount: 3,
+    );
+    for (final (int minutesAgo, double level) point in <(int, double)>[
+      (10, 40),
+      (5, 45),
+      (0, 50),
+    ]) {
+      store.samples.add(
+        TelemetrySample.fromSnapshot(
+          sessionSnapshot(
+            at: now.subtract(Duration(minutes: point.$1)),
+            level: point.$2,
+          ),
+          sessionId: 7,
+        ),
+      );
+    }
+
+    container.read(sessionTrackingProvider);
+    await pumpEventQueue();
+
+    final BatteryEstimateResult? result = await container.read(
+      activeSessionEstimateProvider.future,
+    );
+    expect(result, isNotNull);
+    expect(result!.isAvailable, isTrue);
+    expect(result.estimate!.kind, BatteryEstimateKind.timeToFull);
+    expect(result.estimate!.remaining, const Duration(minutes: 50));
   });
 }

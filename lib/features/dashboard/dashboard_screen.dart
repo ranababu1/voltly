@@ -12,6 +12,7 @@ import 'package:voltly/core/telemetry/telemetry_models.dart';
 import 'package:voltly/core/telemetry/telemetry_providers.dart';
 import 'package:voltly/features/dashboard/telemetry_diagnostics_screen.dart';
 import 'package:voltly/features/dashboard/telemetry_presentation.dart';
+import 'package:voltly/features/sessions/session_estimate_card.dart';
 import 'package:voltly/features/sessions/session_history_screen.dart';
 import 'package:voltly/features/sessions/session_widgets.dart';
 
@@ -221,6 +222,8 @@ class _DashboardData extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           _PrimaryBatteryCard(snapshot: snapshot, isStale: isStale),
+          const SizedBox(height: AppSpacing.md),
+          const SessionEstimateCard(),
           const SizedBox(height: AppSpacing.md),
           LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:voltly/core/persistence/persistence_providers.dart';
 import 'package:voltly/core/persistence/session_store.dart';
+import 'package:voltly/core/sessions/battery_time_estimate.dart';
 import 'package:voltly/core/sessions/charging_session.dart';
 import 'package:voltly/core/sessions/session_coordinator.dart';
 import 'package:voltly/core/sessions/session_detail.dart';
@@ -146,4 +147,29 @@ final sessionDetailProvider = FutureProvider.autoDispose
         sessionId,
       );
       return SessionDetail(session: session, samples: samples);
+    });
+
+/// Estimate for the currently active session. Null when no session is active.
+final activeSessionEstimateProvider =
+    FutureProvider.autoDispose<BatteryEstimateResult?>((Ref ref) async {
+      final SessionTrackingState tracking = ref.watch(sessionTrackingProvider);
+      final int? sessionId = tracking.activeSession?.id;
+      if (sessionId == null) return null;
+
+      final SessionStore store = ref.watch(sessionRepositoryProvider);
+      try {
+        final ChargingSession? session = await store.sessionById(sessionId);
+        if (session == null || !session.isActive) return null;
+        final List<TelemetrySample> samples = await store.samplesForSession(
+          sessionId,
+        );
+        return BatteryTimeEstimator.estimate(
+          session: session,
+          samples: samples,
+        );
+      } catch (error) {
+        return BatteryEstimateResult.unavailable(
+          'Stored session samples are unavailable (${error.runtimeType}).',
+        );
+      }
     });
