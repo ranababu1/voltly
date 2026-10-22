@@ -6,7 +6,7 @@ import 'package:voltly/core/telemetry/telemetry_models.dart';
 /// Test double that lets widget tests drive each telemetry state.
 ///
 /// The latest snapshot or error is replayed when a new listener subscribes, so
-/// tests do not depend on provider subscription timing and autoDispose
+/// tests do not depend on provider subscription timing and later
 /// re-subscriptions still receive current state.
 class FakeBatteryTelemetryService implements BatteryTelemetryService {
   final List<StreamController<TelemetrySnapshot>> _listeners =

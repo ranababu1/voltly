@@ -1,8 +1,8 @@
 # Current State
 
-**Last updated:** 2026-10-20
-**Milestone:** Phase 3 — Charging Sessions (in progress; domain and persistence foundations complete, live integration/UI pending)
-**Project version:** `0.6.0+6` (versionCode 6)
+**Last updated:** 2026-10-22
+**Milestone:** Phase 3 — Charging Sessions (in progress; live persistence and history list complete, detail/charts pending)
+**Project version:** `0.7.0+7` (versionCode 7)
 
 ## Release
 
@@ -12,8 +12,10 @@
   `Voltly-v0.6.0-arm64-v8a.apk` (17.0 MB)
 - Signing certificate SHA-256:
   `54:3D:C7:A8:C3:D4:E3:3D:63:E8:18:0F:09:1F:2A:BD:07:9D:10:2D:3E:32:E8:71:50:38:8F:04:FE:34:D6:41`
-- Marked pre-release because session history UI and physical-device validation
-  are still pending.
+- Marked pre-release because the session history UI and physical-device
+  validation were still pending at publication; `v0.6.0` predates live session
+  tracking and history.
+- The current development build is `0.7.0+7`; it is not published.
 - Both uploaded assets were downloaded again and their SHA-256 hashes matched
   the local signed builds.
 - A tag-triggered release workflow (`.github/workflows/release.yml`) is added for
@@ -38,6 +40,8 @@
 | Large-text layout | Scrollable, no overflow at 320×640 and 2× text; dashboard and diagnostics covered | Widget tests passed |
 | Charging-session domain | Normalized session/sample models with nullable levels, provenance, sample count and gap/coverage metadata | 2 sample-mapping tests; `flutter analyze` |
 | Session state machine | Charging starts, full/discharging completes, `not_charging` grace, interrupted/partial states, duplicate and restart handling | 14 tracker tests |
+| Live session coordinator | App-scoped DB/repository; serialized snapshots; persisted start/sample/end; restart recovery; failure pause/retry | 6 coordinator + 4 provider tests |
+| Session history UI | Dashboard entry; active/completed/interrupted, gap, partial and pruned labels; 2× text; semantics | 6 history UI tests; emulator active session |
 | Local persistence | Drift schema v1, indexes, foreign keys, nullable values, availability/provenance metadata | 13 persistence tests; schema inspection |
 | Transactional repository | Atomic session/sample writes, duplicate handling, restart recovery, duplicate-active reconciliation, delete-all | Repository tests |
 | Retention | 100 ended sessions, 180 days, 720 samples/session; active sessions retained; pruning flagged honestly | Retention/cap tests |
@@ -49,17 +53,16 @@
 | Dart telemetry contract | Strict parsing, zero-vs-unavailable, schema rejection | 16 Dart tests |
 | Calculated power | Battery-side watts with 2 s input skew rule | 7 Dart tests |
 | Channel client | MethodChannel snapshot, EventChannel stream, cancel handling | 6 Dart tests |
-| Riverpod state | `TelemetryController` owns one subscription; auto-dispose; explicit retry | 8 dashboard + 6 diagnostics + 2 lifecycle tests |
+| Riverpod state | `TelemetryController` owns one app-scoped subscription; explicit retry | Dashboard, diagnostics, lifecycle and history tests |
 | Diagnostics UI | Live values, availability/reason, provenance, timestamps, stale/error/loading states | Widget tests + emulator UI hierarchy |
-| End-to-end telemetry | Dashboard matched `dumpsys`; live simulated update to 42%/Charging/AC; resume retained data | Pixel 10a AVD, Android 17 |
-| Automated tests | 78 Dart + 13 Kotlin | `flutter test` 78/78; Gradle 13/13 |
-| Android builds | Debug and release APKs build at version 0.6.0; release is production-signed and bundles SQLite for three ABIs | Debug/release builds; `apksigner`; APK metadata checked |
+| End-to-end telemetry | Dashboard matched `dumpsys`; live simulated update to 42%/Charging/AC; session persisted and shown in history | Pixel 10a AVD, Android 17 |
+| Automated tests | 96 Dart + 13 Kotlin | `flutter test` 96/96; Gradle 13/13 |
+| Android builds | Debug/release at 0.7.0; universal 51.2 MB, arm64 17.8 MB; production-signed SQLite bundles | Builds; `apksigner`; APK metadata; emulator |
 
-**Deliberately absent:** live session wiring, session history/detail UI, charts,
-alerts, health/capacity estimates and a light theme. The dashboard still shows
-only real device telemetry, explicit unavailable states and calculated power
-labeled as approximate. The session tracker and database repository are tested
-foundations but are not started by the running app yet.
+**Deliberately absent:** session detail screens, trend charts, alerts,
+health/capacity estimates and a light theme. The dashboard shows only real
+device telemetry, explicit unavailable states and calculated power labeled as
+approximate. Session tracking and history now run against the local database.
 
 ## Architecture and data flow
 
@@ -72,14 +75,14 @@ BatteryTelemetryChannel (MethodChannel + EventChannel)
         ↓
 PlatformBatteryTelemetryService (typed Dart client)
         ↓
-TelemetryController (single subscription; pauses when inactive,
+TelemetryController (app-scoped single subscription; pauses when inactive,
 retains last snapshot; explicit retry)
         ↓
 TelemetrySnapshot → DashboardScreen + TelemetryDiagnosticsScreen
-
-Session path (implemented, not yet wired):
-TelemetrySnapshot → ChargingSessionTracker → SessionRepository → Drift/SQLite
-History UI is the next increment.
+        ↓
+SessionCoordinator → ChargingSessionTracker → SessionRepository
+        ↓
+Drift/SQLite → SessionHistoryScreen
 ```
 
 - `lib/main.dart` sets the system UI overlay and runs `VoltlyApp` in a
@@ -92,21 +95,24 @@ History UI is the next increment.
   client. Widgets must not access platform channels or Android APIs.
 - `lib/core/telemetry/battery_power.dart` derives approximate battery-side
   watts only from available, contemporaneous voltage/current.
-- `lib/core/sessions/` contains the pure session domain. `ChargingSession`
-  records lifecycle and sampling-gap metadata, `TelemetrySample` retains the
-  original snapshot with provenance, and `ChargingSessionTracker` turns real
-  snapshots into started/sample/ended updates. It has no database, UI or
-  lifecycle dependencies.
+- `lib/core/sessions/` contains the session domain, coordinator, tracking
+  providers and honest formatting. `SessionCoordinator` serializes real
+  snapshots through `ChargingSessionTracker` and the persistence boundary,
+  restores the active session at launch and pauses on storage failure.
 - `lib/core/persistence/` contains Drift schema v1, table/index definitions,
   the transactional repository, retention policy and stored-row mapper. The
   repository writes session + sample atomically, recovers the active session,
   reconciles duplicate active rows and enforces bounded retention.
 - `openVoltlyDatabase()` resolves `voltly.sqlite` in the application support
-  directory through `path_provider`; the running app does not call it yet, so no
-  production database file exists.
+  directory through `path_provider`. The app-scoped `databaseProvider` opens it
+  lazily and closes it when the provider scope is disposed.
 - `lib/core/telemetry/telemetry_providers.dart` contains the app-active flag and
-  `TelemetryController`, which owns the single service subscription and cancels
-  it when the app is not resumed. The last snapshot is retained; retry is
+  `TelemetryController`, which owns the single app-scoped service subscription
+  and cancels it when the app is not resumed. The last snapshot is retained;
+  retry is explicit.
+- `lib/features/sessions/session_history_screen.dart` lists recent sessions and
+  labels active/completed/interrupted, gaps, partial sessions and pruned sample
+  lists. The dashboard links to it and shows a storage-error banner with Retry.
   explicit.
 - `lib/features/dashboard/dashboard_screen.dart` consumes the controller and
   renders the live primary/secondary metrics. It does not query channels or
@@ -121,6 +127,8 @@ History UI is the next increment.
 - `docs/telemetry-contract.md` is the authoritative channel/payload contract.
 - `docs/persistence.md` documents schema v1, transactions, recovery, retention
   and deletion behavior.
+- `docs/release.md` documents signing, APK naming, verification and release
+  safety; `.github/workflows/release.yml` handles future version tags.
 
 ## Toolchain
 
@@ -146,17 +154,16 @@ flutter build apk --release
 flutter build apk --release --split-per-abi
 ```
 
-Last known results: format clean, analyze clean, 78/78 Dart tests passed,
-13/13 Kotlin tests passed, debug and release builds succeeded at version 0.6.0.
-The persistence slice added 13 tests; Kotlin was unchanged. Release APK is
-48.9 MB, bundles SQLite for arm64-v8a/armeabi-v7a/x86_64 and has no `INTERNET`
-permission. The dashboard on the Pixel 10a AVD (Android 17) matched
-`dumpsys battery`:
-100%, "Not charging", 5.00 V, 25.0 °C, 10.0 mAh and 4.50 W calculated.
-Simulated `level 42`, `status 2` and `ac 1` updated the running dashboard to
-42%, "Charging" and "AC" without restart. Home then resume produced a HOT
-return with fresh values. `--split-per-abi` has not been run and is required
-for the arm64 release artifact.
+Last known results: format clean, analyze clean, 96/96 Dart tests passed,
+13/13 Kotlin tests passed, signed debug/release builds succeeded at version
+0.7.0. Universal release is 51.2 MB; arm64 is 17.8 MB; both are production-signed,
+bundle SQLite and have no `INTERNET` permission. On the Pixel 10a AVD
+(Android 17), simulated `level 42`, `status 2`, `ac 1` produced live dashboard
+values and a real `Recording` session in Charging sessions (start 42%, one
+sample). The dashboard also matched `dumpsys battery` earlier at 100%,
+"Not charging", 5.00 V, 25.0 °C, 10.0 mAh and 4.50 W calculated.
+`--split-per-abi --target-platform android-arm64` produced the arm64 artifact;
+the arm64 APK cannot install on this x86_64 emulator.
 
 ## Known issues and limitations
 
@@ -170,11 +177,11 @@ for the arm64 release artifact.
   labels are implemented and automated-tested. Manual TalkBack validation on a
   physical device remains pending.
 - The dashboard is dark-only by design; no light theme is included.
-- Charging-session domain and Drift/SQLite persistence are implemented and
-  tested, but the tracker and repository are not wired to the live controller or
-  UI. The running app does not create a production database file yet.
-- Session history/detail UI, charts, alerts and estimates are not implemented
+- Live session tracking and history are implemented and automated-tested.
+  Session detail screens, trend charts, alerts and estimates are not implemented
   yet (Phase 3+). No v2 migration exists; the newer-schema guard is tested.
+- The last published GitHub Release `v0.6.0` predates live session tracking and
+  history. The current `0.7.0+7` development build is not published.
 - `currentAverage` and `chargeCounter` are unsupported on many devices; the
   contract reports this explicitly and no fallback estimate is invented.
 - Riverpod automatic retry is disabled for telemetry. A failed native channel
@@ -228,33 +235,28 @@ for the arm64 release artifact.
 
 ## Next task
 
-**Phase 3 (increment 2) — wire live session persistence and expose history.**
+**Phase 3 (increment 3) — session detail and trend charts.**
 
-Prerequisite complete: session tracker, schema v1, transactional repository,
-recovery and retention (29 tests across domain and persistence).
+Prerequisite complete: live session coordinator, app-scoped persistence and
+history list (96 Dart tests).
 
 Acceptance criteria:
 
-1. Create one app-scoped lazy database/repository and close it deterministically
-   when the app scope is disposed. No second database instance may be created by
-   screens.
-2. Feed each real telemetry snapshot through a single session coordinator using
-   `ChargingSessionTracker`; persist `started`, `sample` and `ended` updates
-   transactionally with the active session id.
-3. Restore the active session on startup through `recoverActiveSession()` and
-   `ChargingSessionTracker.restoreActiveSession()`. Record the restart gap
-   instead of starting a duplicate session.
-4. Keep sampling foreground-only: lifecycle pause stops acquisition without
-   ending the session; resume records the gap. Database failures must not crash
-   the dashboard and must surface explicitly rather than silently dropping data.
-5. Add a session history list reachable from the dashboard with loading, empty,
-   error, active, completed, interrupted and pruned/partial labels. Do not imply
-   continuous history when gaps or retention pruning exist; validate semantics
-   and 320×640 at 2× text.
-6. Add coordinator/provider and history-UI tests, including restart recovery,
-   duplicate snapshots, persistence failure and partial-history copy.
-7. Run build_runner, format, analyze, Dart/Kotlin tests, debug/release builds;
+1. Tapping a history card opens a detail screen by session id and loads the
+   session plus its stored samples through the repository. Loading, not-found,
+   empty-sample and storage-error states must be explicit.
+2. Show summary fields (state, start/end levels, duration, sample count,
+   coverage/pruning) without substituting values for unavailable readings.
+3. Add a level-over-time chart plus current/temperature/power trends only from
+   stored samples. Do not interpolate across sampling gaps, interrupted periods
+   or pruned ranges; mark gaps explicitly and label history as non-continuous.
+4. Charts must expose concise semantics and remain readable at 320×640 with 2×
+   text. Respect reduced motion if any animation is added.
+5. Add repository/detail/chart tests covering normal, interrupted, gap-affected,
+   pruned and unavailable data.
+6. Run build_runner, format, analyze, Dart/Kotlin tests, debug/release builds;
    update documentation and push.
 
 Physical-device telemetry and manual screen-reader validation remain
-outstanding. Session detail and trend charts are the following increment.
+outstanding. Session detail must not imply continuous sampling or charger-side
+power.

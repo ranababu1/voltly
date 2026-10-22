@@ -12,8 +12,8 @@ import 'package:voltly/features/dashboard/telemetry_presentation.dart';
 ///
 /// This is not the Phase 2 dashboard. It exists to validate real readings,
 /// availability, provenance and timestamps on devices without inventing any
-/// values. The provider is auto-disposed, so leaving this screen releases the
-/// native broadcast receiver.
+/// values. Telemetry is app-scoped so session tracking survives navigation;
+/// backgrounding still cancels the native broadcast receiver.
 class TelemetryDiagnosticsScreen extends ConsumerWidget {
   const TelemetryDiagnosticsScreen({super.key});
 

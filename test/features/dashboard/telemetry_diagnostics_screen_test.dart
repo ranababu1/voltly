@@ -26,8 +26,8 @@ void main() {
       ),
     );
     addTearDown(() async {
-      // Dispose the screen first so autoDispose cancels the stream and its
-      // freshness timer before the controller closes.
+      // Dispose the provider scope so the telemetry stream and freshness timer
+      // are released before the fake closes.
       await tester.pumpWidget(const SizedBox.shrink());
       await fake.dispose();
     });

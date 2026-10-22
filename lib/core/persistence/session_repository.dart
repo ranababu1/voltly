@@ -6,6 +6,7 @@ import 'package:voltly/core/persistence/app_database.dart';
 import 'package:voltly/core/persistence/sample_mapper.dart';
 import 'package:voltly/core/persistence/sample_metadata.dart';
 import 'package:voltly/core/persistence/session_retention_policy.dart';
+import 'package:voltly/core/persistence/session_store.dart';
 import 'package:voltly/core/sessions/charging_session.dart';
 import 'package:voltly/core/sessions/telemetry_sample.dart';
 import 'package:voltly/core/telemetry/battery_power.dart';
@@ -16,7 +17,7 @@ import 'package:voltly/core/telemetry/telemetry_models.dart';
 /// A session summary and its sample are always written in one transaction. The
 /// repository never invents values: unavailable readings are stored as null and
 /// their availability/reason metadata is preserved.
-class SessionRepository {
+class SessionRepository implements SessionStore {
   SessionRepository(
     this.database, {
     this.retention = const SessionRetentionPolicy(),
@@ -31,6 +32,7 @@ class SessionRepository {
 
   /// Inserts a new active session and its first sample, returning the persisted
   /// session with its database id.
+  @override
   Future<ChargingSession> startSession({
     required ChargingSession session,
     required TelemetrySample sample,
@@ -59,6 +61,7 @@ class SessionRepository {
   }
 
   /// Appends a sample and updates the active session summary atomically.
+  @override
   Future<void> appendSample({
     required int sessionId,
     required ChargingSession session,
@@ -71,6 +74,7 @@ class SessionRepository {
   }
 
   /// Writes the final sample and the terminal session state atomically.
+  @override
   Future<void> endSession({
     required int sessionId,
     required ChargingSession session,
@@ -92,6 +96,7 @@ class SessionRepository {
   /// row. The newest is retained; older rows are marked interrupted at the
   /// newest session's start and their gap flag is set, preventing a false claim
   /// of continuous coverage.
+  @override
   Future<ChargingSession?> recoverActiveSession() {
     return database.transaction(() async {
       final List<ChargingSessionRow> rows =
@@ -135,6 +140,7 @@ class SessionRepository {
     return row == null ? null : _toDomain(row);
   }
 
+  @override
   Future<List<ChargingSession>> recentSessions({int limit = 20}) {
     if (limit <= 0) {
       throw ArgumentError.value(limit, 'limit', 'Limit must be positive.');
@@ -154,6 +160,7 @@ class SessionRepository {
 
   /// Returns stored samples in observation order. Missing metadata becomes an
   /// invalid reading rather than an invented value.
+  @override
   Future<List<TelemetrySample>> samplesForSession(int sessionId) async {
     final List<TelemetrySampleRow> rows =
         await (database.select(database.telemetrySamples)
@@ -168,6 +175,7 @@ class SessionRepository {
 
   /// Removes all local session history and returns the number of sessions
   /// deleted. Samples are deleted in the same transaction.
+  @override
   Future<int> deleteAllSessions() {
     return database.transaction(() async {
       final int count = await database.chargingSessions.count().getSingle();
@@ -179,6 +187,7 @@ class SessionRepository {
   }
 
   /// Applies age and count bounds to ended sessions. Active sessions are kept.
+  @override
   Future<void> enforceRetention({DateTime? now}) {
     return database.transaction(
       () => _enforceRetention((now ?? _clock()).toUtc()),

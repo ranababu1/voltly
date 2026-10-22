@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -5,11 +6,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:voltly/app/theme/app_colors.dart';
 import 'package:voltly/app/theme/app_tokens.dart';
+import 'package:voltly/core/sessions/session_providers.dart';
 import 'package:voltly/core/telemetry/battery_power.dart';
 import 'package:voltly/core/telemetry/telemetry_models.dart';
 import 'package:voltly/core/telemetry/telemetry_providers.dart';
 import 'package:voltly/features/dashboard/telemetry_diagnostics_screen.dart';
 import 'package:voltly/features/dashboard/telemetry_presentation.dart';
+import 'package:voltly/features/sessions/session_history_screen.dart';
+import 'package:voltly/features/sessions/session_widgets.dart';
 
 /// Voltly's telemetry-driven battery dashboard.
 ///
@@ -24,6 +28,7 @@ class DashboardScreen extends ConsumerWidget {
     final AsyncValue<TelemetrySnapshot> snapshot = ref.watch(
       telemetrySnapshotProvider,
     );
+    final SessionTrackingState tracking = ref.watch(sessionTrackingProvider);
     final TextTheme textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
@@ -62,6 +67,14 @@ class DashboardScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             _DashboardHeader(
+                              onOpenHistory: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (BuildContext context) =>
+                                        const SessionHistoryScreen(),
+                                  ),
+                                );
+                              },
                               onOpenDiagnostics: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute<void>(
@@ -71,6 +84,19 @@ class DashboardScreen extends ConsumerWidget {
                                 );
                               },
                             ),
+                            if (tracking.hasError) ...<Widget>[
+                              const SizedBox(height: AppSpacing.md),
+                              SessionStorageErrorBanner(
+                                error: tracking.error!,
+                                onRetry: () {
+                                  unawaited(
+                                    ref
+                                        .read(sessionTrackingProvider.notifier)
+                                        .retry(),
+                                  );
+                                },
+                              ),
+                            ],
                             const SizedBox(height: AppSpacing.xl),
                             Text(
                               'Battery overview',
@@ -116,8 +142,12 @@ class DashboardScreen extends ConsumerWidget {
 }
 
 class _DashboardHeader extends StatelessWidget {
-  const _DashboardHeader({required this.onOpenDiagnostics});
+  const _DashboardHeader({
+    required this.onOpenHistory,
+    required this.onOpenDiagnostics,
+  });
 
+  final VoidCallback onOpenHistory;
   final VoidCallback onOpenDiagnostics;
 
   @override
@@ -153,6 +183,14 @@ class _DashboardHeader extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+        ),
+        IconButton(
+          onPressed: onOpenHistory,
+          tooltip: 'Charging sessions',
+          icon: const Icon(
+            Icons.history_rounded,
+            color: AppColors.textSecondary,
           ),
         ),
         IconButton(

@@ -1,7 +1,7 @@
 # Local Persistence
 
-**Status:** schema v1 and repository implemented; not yet wired to live
-acquisition or UI.
+**Status:** schema v1, repository and live session tracking are implemented. The
+session history list is implemented; detail/charts are pending.
 
 Voltly uses Drift on top of SQLite (`package:sqlite3` native assets). The
 database is local-only and is never committed to source control. The production
@@ -91,6 +91,19 @@ the write that triggered it.
 
 `deleteAllSessions()` removes all sessions and samples in one transaction and
 returns the number of sessions deleted.
+
+## Live integration
+
+- `databaseProvider` owns the single database for the app lifetime; it opens
+  lazily and closes when the provider scope is disposed.
+- `SessionCoordinator` serializes foreground snapshots through the tracker and
+  repository. It restores the active session on launch and leaves it open while
+  the app is backgrounded so the next observation records a gap.
+- A storage failure pauses live tracking, keeps the dashboard usable and shows a
+  Retry banner. Retry reloads the last committed active session.
+- The history screen reads recent sessions from the same repository. It labels
+  active, completed and interrupted sessions, sampling gaps, partial sessions
+  and retention-pruned sample lists.
 
 ## Privacy
 

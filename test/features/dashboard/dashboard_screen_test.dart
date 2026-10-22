@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:voltly/core/telemetry/telemetry_models.dart';
 import 'package:voltly/features/dashboard/telemetry_presentation.dart';
 
+import '../../support/fake_session_store.dart';
 import '../../support/pump_voltly_app.dart';
 import '../../support/telemetry_fixtures.dart';
 
@@ -223,5 +224,39 @@ void main() {
     expect(find.text('Telemetry diagnostics'), findsOneWidget);
     expect(find.text('Developer diagnostics'), findsOneWidget);
     expect(find.text('Schema v1'), findsOneWidget);
+  });
+
+  testWidgets('opens charging session history from the dashboard', (
+    WidgetTester tester,
+  ) async {
+    await pumpVoltlyApp(tester);
+
+    await tester.tap(find.byTooltip('Charging sessions'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text('Charging sessions'), findsOneWidget);
+    expect(find.text('Session history'), findsOneWidget);
+    expect(find.text('No charging sessions yet'), findsOneWidget);
+  });
+
+  testWidgets('surfaces a session storage failure and retries', (
+    WidgetTester tester,
+  ) async {
+    final FakeSessionStore store = FakeSessionStore()
+      ..failOperation = 'recover';
+    await pumpVoltlyApp(tester, sessionStore: store);
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Session recording paused'), findsOneWidget);
+
+    store.failOperation = null;
+    await tester.ensureVisible(find.text('Retry'));
+    await tester.tap(find.text('Retry'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Session recording paused'), findsNothing);
   });
 }

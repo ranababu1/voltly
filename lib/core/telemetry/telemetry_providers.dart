@@ -112,7 +112,6 @@ class TelemetryController extends Notifier<AsyncValue<TelemetrySnapshot>> {
 
 final NotifierProvider<TelemetryController, AsyncValue<TelemetrySnapshot>>
 telemetrySnapshotProvider =
-    NotifierProvider.autoDispose<
-      TelemetryController,
-      AsyncValue<TelemetrySnapshot>
-    >(TelemetryController.new);
+    NotifierProvider<TelemetryController, AsyncValue<TelemetrySnapshot>>(
+      TelemetryController.new,
+    );

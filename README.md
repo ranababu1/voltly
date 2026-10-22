@@ -6,28 +6,27 @@ Voltly is an Android-first battery-monitoring and charging-analytics app. It
 presents device-reported telemetry honestly, keeps history on the device, and
 never substitutes guessed or demo values for real readings.
 
-> **Status: Phase 3 (in progress) — session persistence foundation.**
+> **Status: Phase 3 (in progress) — live session history.**
 > The dashboard renders live device telemetry with accessible semantics,
 > explicit availability/provenance/stale/error states, calculated battery-side
 > power, a reduce-motion-aware charging pulse, and background pause/resume of
-> acquisition. A pure charging-session state machine classifies real telemetry,
-> and a transactional Drift/SQLite layer now persists sessions and samples with
-> schema v1, recovery and bounded retention. Live wiring and session history UI
-> are the next increment. Physical-device and manual screen-reader validation
-> remain pending.
+> acquisition. An app-scoped session coordinator now feeds real snapshots into
+> the tracker and Drift/SQLite repository, restores active sessions after
+> restart, and exposes a local session-history list with honest gap, interrupted
+> and pruned states. Session detail and trend charts are next. Physical-device
+> and manual screen-reader validation remain pending.
 >
-> **First signed preview:** `v0.6.0` is published with universal and
-> `arm64-v8a` APKs. It is marked as a pre-release because session history UI and
-> physical-device validation are still pending.
+> **Last published build:** `v0.6.0` signed preview (universal and `arm64-v8a`).
+> The current development version is `0.7.0+7`; it is not yet published.
 
 ## Scope
 
 - Android 8.0+ (API 26), phone-first. No iOS target.
 - Local-first and offline. No accounts, backend, ads or analytics SDKs.
 - Dark-only, AMOLED-friendly surfaces with restrained mint accents.
-- Live telemetry and local charging-session persistence are implemented. Session
-  history UI, charts, estimates and alerts are planned in later milestones. See
-  `plan.md` for the authoritative scope.
+- Live telemetry, live session persistence and a local session-history list are
+  implemented. Session detail, charts, estimates and alerts are planned in later
+  milestones. See `plan.md` for the authoritative scope.
 
 ## Toolchain
 
@@ -68,6 +67,9 @@ flutter run
   `Voltly-v0.6.0-arm64-v8a.apk`.
   [GitHub Release](https://github.com/ranababu1/voltly/releases/tag/v0.6.0)
 
+- **Current development:** `0.7.0+7` (live session persistence and history
+  list; not yet published as a GitHub Release).
+
 Release assets are signed with the Voltly production key. See
 `docs/release.md` for signing, verification and publication rules. Future `v*`
 tags use `.github/workflows/release.yml` to build and publish both APKs.
@@ -85,33 +87,37 @@ cd ..
 flutter build apk --debug
 ```
 
-Last recorded results (2026-10-20, Phase 3 persistence slice):
+Last recorded results (2026-10-22, Phase 3 live session history):
 
 - `flutter analyze` — no issues.
-- `flutter test` — 78/78 passed (16 contract parsing, 7 power, 6 channel,
-  6 diagnostics, 9 dashboard, 2 lifecycle provider, 1 motion, 2 app/lifecycle,
-  14 session tracker, 2 session sample, 13 persistence).
+- `flutter test` — 96/96 passed (16 contract parsing, 7 power, 6 channel,
+  6 diagnostics, 11 dashboard, 2 lifecycle provider, 1 motion, 2 app/lifecycle,
+  14 session tracker, 2 session sample, 13 persistence, 6 coordinator,
+  4 session providers, 6 history UI).
 - `.\gradlew.bat :app:testDebugUnitTest` — 13/13 Kotlin tests passed with `--rerun-tasks` (native code
   unchanged in this slice).
-- `flutter build apk --debug` — succeeded at version `0.6.0+6`.
-- `flutter build apk --release` — succeeded (48.9 MB, signed with the debug
-  certificate; not distributable). Includes `libsqlite3.so` for arm64-v8a,
-  armeabi-v7a and x86_64, and no `INTERNET` permission.
+- `flutter build apk --debug` — succeeded at version `0.7.0+7`.
+- `flutter build apk --release` — succeeded (51.2 MB, production-signed).
+- `flutter build apk --release --split-per-abi --target-platform android-arm64`
+  — succeeded (17.8 MB, production-signed).
+- Release APKs remain production-signed; no `INTERNET` permission.
 - Persistence tests cover schema/index creation, transaction rollback,
   unavailable-value mapping, duplicate samples, duplicate active recovery,
   file-backed restart, retention bounds, sample pruning, delete-all and
   newer-schema rejection.
+- Live session tests cover coordinator serialization, restart recovery,
+  append/start failure and retry, provider state/history refresh, storage-error
+  banner, history loading/empty/error and honest gap/pruned labels.
 - Release APKs are signed with `CN=Voltly Release, O=Voltly, C=US`; SHA-256
   `54:3D:C7:A8:C3:D4:E3:3D:63:E8:18:0F:09:1F:2A:BD:07:9D:10:2D:3E:32:E8:71:50:38:8F:04:FE:34:D6:41`.
-  Universal is 48.9 MB; arm64 is 17.0 MB.
-- The universal signed APK was installed on the Pixel 10a AVD, cold-launched as
-  version `0.6.0`, and showed live dashboard values. The arm64 APK was built,
-  signature-checked and ABI-checked, but cannot be installed on the x86_64
-  emulator.
-- The Phase 2 emulator validation remains the last on-device UI validation.
-  Debug APK was installed and cold-launched on a Pixel 10a AVD (Android 17).
-  Dashboard values matched `adb shell dumpsys battery`: 100%, "Not charging",
-  5.00 V, 25.0 °C, 10.0 mAh and 4.50 W calculated.
+  Universal is 51.2 MB; arm64 is 17.8 MB.
+- The `0.7.0` universal APK was installed on the Pixel 10a AVD, cold-launched,
+  and displayed simulated live values (42%, Charging, AC). The Charging sessions
+  screen showed a real active session: Recording, start level 42%, one sample.
+  The arm64 APK was built and signature/ABI-checked, but cannot be installed on
+  the x86_64 emulator.
+- The dashboard was previously validated against `dumpsys battery` at 100%,
+  "Not charging", 5.00 V, 25.0 °C, 10.0 mAh and 4.50 W calculated.
 - Live update test: simulated `level 42`, `status 2` and `ac 1` via
   `dumpsys battery`; the running dashboard updated to 42%, "Charging" and
   "Power source: AC" without a restart.
@@ -139,16 +145,21 @@ lib/
     telemetry/
       telemetry_models.dart         Typed snapshot and availability model
       battery_telemetry_service.dart Platform-channel client
-      telemetry_providers.dart      Riverpod service and autoDispose stream
+      telemetry_providers.dart      App-scoped telemetry controller
       battery_power.dart            Calculated battery-side power
     sessions/
       charging_session.dart         Session lifecycle and coverage metadata
       charging_session_tracker.dart Pure telemetry-to-session state machine
       telemetry_sample.dart         Snapshot captured within a session
+      session_coordinator.dart      Serialized live tracker/store coordinator
+      session_providers.dart        Tracking state and recent-session providers
+      session_presentation.dart     Honest session labels and formatting
     persistence/
       app_database.dart             Drift schema v1, migrations and file opener
       tables.dart                   Session/sample columns and indexes
       session_repository.dart       Transactional writes, recovery and retention
+      session_store.dart            Narrow persistence boundary for tests
+      persistence_providers.dart    App-scoped database/repository providers
       session_retention_policy.dart Bounded-history defaults
       sample_metadata.dart          Availability/provenance JSON encoding
       sample_mapper.dart            Stored row to domain sample
@@ -157,12 +168,16 @@ lib/
       dashboard_screen.dart         Telemetry-driven dashboard
       telemetry_diagnostics_screen.dart  Real-service diagnostics UI
       telemetry_presentation.dart   Shared formatting, badges and freshness
+    sessions/
+      session_history_screen.dart   Local session list and honest states
+      session_widgets.dart          Storage-error banner
 test/
   core/telemetry/                   Contract, power, channel and lifecycle tests
-  core/sessions/                    Session tracker and sample mapping tests
+  core/sessions/                    Tracker, coordinator, provider and mapping tests
   core/persistence/                 Schema, repository, recovery and retention tests
   features/dashboard/               Dashboard, diagnostics, motion and semantics
-  support/                          Fixtures, fake service and app pump helper
+  features/sessions/                History list, states, semantics and large text
+  support/                          Fixtures, fakes and app pump helper
   widget_test.dart                  App root, theme and lifecycle smoke tests
 android/app/src/main/kotlin/com/voltly/
   MainActivity.kt                   Registers the telemetry channels
@@ -176,13 +191,12 @@ Feature directories are added only when a milestone needs them.
 
 ## Architecture decisions
 
-- **State management:** Riverpod (`flutter_riverpod` 3.4.3). One
+- **State management:** Riverpod (`flutter_riverpod` 3.4.3). One app-scoped
   `TelemetryController` notifier owns the single service subscription and is
-  shared by the dashboard and diagnostics. It is auto-disposed when the last
-  screen closes, cancels acquisition when the app leaves the foreground,
-  retains the last snapshot, and resubscribes on resume. Automatic provider
-  retry is disabled; both screens offer an explicit Retry. No competing state
-  pattern is used.
+  shared by the dashboard, diagnostics and session tracking. It cancels
+  acquisition when the app leaves the foreground, retains the last snapshot and
+  resubscribes on resume. Automatic provider retry is disabled; screens offer an
+  explicit Retry. No competing state pattern is used.
 - **Telemetry boundary:** implemented. A single Kotlin reader acquires readings
   from `ACTION_BATTERY_CHANGED` and `BatteryManager`, converts units once and
   publishes a versioned contract through MethodChannel/EventChannel. The Dart
@@ -214,11 +228,19 @@ Feature directories are added only when a milestone needs them.
   320×640 with 2× text; status is never communicated by color alone.
 - **Presentation:** dashboard and diagnostics share one formatting, badge and
   freshness layer so status language cannot drift between screens.
-- **Persistence:** Drift/SQLite schema v1 and a transactional repository are
-  implemented. Session summaries and samples are written atomically, stored
-  availability/provenance is preserved, active sessions are recovered after
-  restart, and bounded retention plus delete-all are implemented. It is not yet
-  wired to live acquisition or UI. See `docs/persistence.md`.
+- **Session tracking:** an app-scoped `SessionCoordinator` serializes real
+  snapshots through the tracker and repository, restores the persisted active
+  session on launch, and leaves it open across foreground pauses. Storage
+  failures pause tracking, surface a dashboard banner and can be retried from
+  the last committed state.
+- **Session history:** the dashboard opens a local-only list of recent sessions.
+  Active, completed and interrupted states are labelled; telemetry gaps,
+  interrupted endings and retention-pruned sample lists are visible. The list
+  never implies continuous sampling while Voltly was closed.
+- **Persistence:** Drift/SQLite schema v1 is live. Session summaries and samples
+  are written atomically, availability/provenance is preserved, active sessions
+  are recovered after restart, and bounded retention plus delete-all are
+  implemented. See `docs/persistence.md`.
 - **Charts and estimates:** deferred until real captured data exists. Estimates
   will be labeled and withheld when evidence is insufficient.
 
@@ -228,8 +250,8 @@ Feature directories are added only when a milestone needs them.
   ads or tracking SDKs are included.
 - Battery telemetry uses `ACTION_BATTERY_CHANGED` and `BatteryManager`, which
   require no runtime permission. Readings are processed on-device. The local
-  session database layer stores only Voltly session data when integrated and is
-  never transmitted.
+  session database stores only Voltly session data in the app support directory
+  and is never transmitted.
 - The release manifest requests **no** runtime permissions and no `INTERNET`
   permission. Debug and profile builds include Flutter's development-only
   `INTERNET` permission for hot reload and debugging.
@@ -242,7 +264,7 @@ Feature directories are added only when a milestone needs them.
 ## Versioning
 
 `pubspec.yaml` uses semantic-style `MAJOR.MINOR.PATCH+BUILD`. The project is
-pre-1.0 during development (`0.6.0+6` now). Build numbers increment for each
+pre-1.0 during development (`0.7.0+7` now). Build numbers increment for each
 distributed release candidate. The first signed preview tag is `v0.6.0`.
 Tag and release conventions are defined in `instructions.md` §17.
 
@@ -268,11 +290,11 @@ Tag and release conventions are defined in `instructions.md` §17.
   labels are implemented. Manual TalkBack/screen-reader validation and
   physical-device testing remain pending.
 - The app is dark-only by design; no light theme is included.
-- Charging-session classification and persistence exist and are tested, but the
-  tracker/repository are not yet wired to live acquisition or shown in the UI.
-  No production database file is created by the running app yet.
-- Session history UI, charts, alerts and health/capacity estimates remain
-  pending (Phase 3+).
+- Live session tracking and the history list are implemented and tested. Session
+  detail, trend charts, alerts and health/capacity estimates remain pending
+  (Phase 3+).
+- The last published APK is `v0.6.0`; it predates live session history. The
+  current development version `0.7.0+7` has not been published.
 - Average current, charge counter and other metrics are unsupported on some
   devices. The contract reports availability per metric; this is not a bug.
 - Release signing is configured with a dedicated Voltly key stored outside

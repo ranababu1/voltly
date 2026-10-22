@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:voltly/app/theme/app_theme.dart';
+import 'package:voltly/core/sessions/session_providers.dart';
 import 'package:voltly/core/telemetry/telemetry_providers.dart';
 import 'package:voltly/features/dashboard/dashboard_screen.dart';
 
@@ -29,6 +30,9 @@ class _VoltlyAppState extends ConsumerState<VoltlyApp>
           .read(appActiveProvider.notifier)
           .setActive(lifecycleState == AppLifecycleState.resumed);
     }
+    // Start the app-scoped session coordinator immediately. It restores the
+    // persisted active session before the first live snapshot is processed.
+    ref.read(sessionTrackingProvider);
   }
 
   @override

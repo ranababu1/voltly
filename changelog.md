@@ -2,6 +2,70 @@
 
 Newest-first record of meaningful implementation changes.
 
+## 2026-10-22 — Phase 3 (in progress): live session persistence and history
+
+**Milestone:** Phase 3 — Charging Sessions
+
+**Summary**
+
+- Made telemetry app-scoped and started an app-scoped Drift/SQLite database and
+  repository at the root. The database opens lazily and closes with the provider
+  scope; screens cannot create their own database.
+- Added `SessionCoordinator`, which serializes real snapshots through
+  `ChargingSessionTracker`, persists started/sample/ended updates with the active
+  session id, restores the active session at launch, and keeps it open across
+  foreground pauses so the next observation records the gap.
+- Added session tracking providers. Storage failures pause tracking, invalidate
+  history, and surface a dashboard Retry banner instead of crashing or silently
+  dropping data. Retry reloads the last committed active session.
+- Added a Charging sessions screen linked from the dashboard. It lists active,
+  completed and interrupted sessions with start/end levels, duration, sample
+  count, telemetry-gap, partial-session and retention-pruned labels. It never
+  presents background time as continuous coverage.
+- Added a shared session presentation layer for honest labels, durations,
+  level changes and screen-reader summaries. History is overflow-tested at
+  320×640 with 2× text.
+- Added 18 tests (6 coordinator, 4 session providers, 6 history UI, 2 dashboard
+  integration), bringing Dart coverage to 96 tests.
+- Bumped the development version to `0.7.0+7`.
+
+**Key files**
+
+- `lib/core/persistence/session_store.dart`
+- `lib/core/persistence/persistence_providers.dart`
+- `lib/core/sessions/session_coordinator.dart`
+- `lib/core/sessions/session_providers.dart`
+- `lib/core/sessions/session_presentation.dart`
+- `lib/features/sessions/session_history_screen.dart`
+- `lib/features/sessions/session_widgets.dart`
+- `test/core/sessions/session_coordinator_test.dart`
+- `test/core/sessions/session_providers_test.dart`
+- `test/features/sessions/session_history_screen_test.dart`
+
+**Verification**
+
+- `dart format lib test` — clean.
+- `flutter analyze` — no issues.
+- `flutter test` — 96/96 passed.
+- `.\gradlew.bat :app:testDebugUnitTest --rerun-tasks` — 13/13 Kotlin tests
+  passed; native code unchanged.
+- `flutter build apk --debug` and `flutter build apk --release` — succeeded at
+  `0.7.0+7`; universal release 51.2 MB, production-signed.
+- `flutter build apk --release --split-per-abi --target-platform android-arm64`
+  — succeeded; arm64 release 17.8 MB, production-signed.
+- Universal `0.7.0` installed on the Pixel 10a AVD. With simulated
+  `level 42`, `status 2`, `ac 1`, the dashboard showed live values and Charging
+  sessions showed a real active session (`Recording`, start 42%, one sample).
+- arm64 was signature/ABI-checked but cannot install on the x86_64 emulator.
+
+**Known limitations**
+
+- Session detail screens and trend charts are not implemented.
+- The last published GitHub Release `v0.6.0` predates live session history;
+  `0.7.0+7` is not published.
+- Physical-device telemetry and manual TalkBack validation remain pending.
+- No AAB is built.
+
 ## 2026-10-20 — v0.6.0 signed preview release
 
 **Milestone:** Phase 3 — Charging Sessions (preview release)
