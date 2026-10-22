@@ -114,7 +114,7 @@ Last recorded results (2026-10-22, Phase 4 increment 1 estimates):
 - `flutter build apk --debug` — succeeded at version `0.9.0+9`.
 - `flutter build apk --release` — succeeded (production-signed).
 - `flutter build apk --release --split-per-abi --target-platform android-arm64`
-  — succeeded (production-signed).
+  — succeeded (production-signed; arm64 versionCode 2009, universal 9).
 - `flutter build appbundle --release` — succeeded; the published AAB is 51.1 MB
   (53,558,550 bytes), production-signed with the Voltly certificate, SHA-256
   `1D137BE4FB509E48B7344899824B6308769D57D83A129DB0CD3445CC6328E958`. It is a

@@ -67,9 +67,11 @@ were verified by downloading them again.
 - Tag: `v0.9.0-preview` at commit `8eacc32`
 - Release: https://github.com/ranababu1/voltly/releases/tag/v0.9.0-preview
 - Assets:
-  - `Voltly-v0.9.0-preview-universal.apk` — 53,968,846 bytes, SHA-256
+  - `Voltly-v0.9.0-preview-universal.apk` — 53,968,846 bytes, versionCode 9,
+    SHA-256
     `A0A7DD579C690A5CB5C09A361E1C73EDDD0640586E9E536C48121520B59C59D9`
-  - `Voltly-v0.9.0-preview-arm64-v8a.apk` — 18,716,326 bytes, SHA-256
+  - `Voltly-v0.9.0-preview-arm64-v8a.apk` — 18,716,326 bytes, versionCode 2009,
+    SHA-256
     `47C3AB6B44C66A81794BA874307FF066BCC45588897C4FC6CC7ACFE279DB0096`
   - `Voltly-v0.9.0-preview.aab` — 53,558,550 bytes, SHA-256
     `1D137BE4FB509E48B7344899824B6308769D57D83A129DB0CD3445CC6328E958`
@@ -82,7 +84,7 @@ were verified by downloading them again.
   Play.
 - The workflow initially failed because the Gradle wrapper was ignored; commit
   `8eacc32` tracks `gradlew`, `gradlew.bat` and `gradle-wrapper.jar`, and the
-  retagged run published successfully.
+  retagged run published successfully (run `39814224399`, conclusion success).
 
 This preview is not a stable release. Do not move the published tag or replace
 the assets.

@@ -10,10 +10,10 @@
 - Release: https://github.com/ranababu1/voltly/releases/tag/v0.9.0-preview
 - Assets:
   - `Voltly-v0.9.0-preview-universal.apk` — 53,968,846 bytes (51.5 MB),
-    SHA-256
+    versionCode 9, SHA-256
     `A0A7DD579C690A5CB5C09A361E1C73EDDD0640586E9E536C48121520B59C59D9`
   - `Voltly-v0.9.0-preview-arm64-v8a.apk` — 18,716,326 bytes (17.8 MB),
-    SHA-256
+    versionCode 2009, SHA-256
     `47C3AB6B44C66A81794BA874307FF066BCC45588897C4FC6CC7ACFE279DB0096`
   - `Voltly-v0.9.0-preview.aab` — 53,558,550 bytes (51.1 MB), SHA-256
     `1D137BE4FB509E48B7344899824B6308769D57D83A129DB0CD3445CC6328E958`
@@ -31,7 +31,7 @@
 - The tag-triggered workflow (`.github/workflows/release.yml`) now builds and
   publishes both APKs and the AAB. A first run exposed a missing tracked Gradle
   wrapper; commit `8eacc32` fixed that and the retagged preview published
-  successfully.
+  successfully (workflow run `39814224399`, conclusion success).
 - Previous release: `v0.6.0` (pre-release), which predates live session tracking,
   history, charts and estimates.
 

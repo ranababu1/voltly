@@ -27,9 +27,9 @@ Newest-first record of meaningful implementation changes.
 **Verification**
 
 - Production-signed assets, downloaded again from the release and verified:
-  - Universal APK: 53,968,846 bytes, SHA-256
+  - Universal APK: 53,968,846 bytes, versionCode 9, SHA-256
     `A0A7DD579C690A5CB5C09A361E1C73EDDD0640586E9E536C48121520B59C59D9`.
-  - arm64 APK: 18,716,326 bytes, SHA-256
+  - arm64 APK: 18,716,326 bytes, versionCode 2009, SHA-256
     `47C3AB6B44C66A81794BA874307FF066BCC45588897C4FC6CC7ACFE279DB0096`.
   - AAB: 53,558,550 bytes, SHA-256
     `1D137BE4FB509E48B7344899824B6308769D57D83A129DB0CD3445CC6328E958`.
