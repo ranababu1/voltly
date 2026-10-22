@@ -2,6 +2,33 @@
 
 Newest-first record of meaningful implementation changes.
 
+## 2026-10-23 — v0.10.0 published
+
+**Summary**
+
+- Published stable GitHub release `v0.10.0` (tag commit `9e53898`, version
+  `0.10.0+10`) at https://github.com/ranababu1/voltly/releases/tag/v0.10.0,
+  including the lock-screen charging screen.
+- Published as stable at the project owner's request; physical-device
+  telemetry and human TalkBack validation are still outstanding, and the
+  release notes say so.
+- Release notes recommend the arm64-v8a APK for the Galaxy S25 Ultra and Moto
+  Edge 70 Fusion; no device-specific builds exist or are needed.
+
+**Verification** (assets downloaded again from the release)
+
+- Universal APK: 54,707,406 bytes, versionCode 10, ABIs arm64-v8a /
+  armeabi-v7a / x86_64, SHA-256
+  `fe68ab42b1f4c0b3cb8909cf54ddb33f0b24b4c9a82abea30ea7f09d90dfd099`.
+- arm64 APK: 18,930,602 bytes, versionCode 2010, SHA-256
+  `7b333442ebff33553b2fd98d7a2e28905d895536da28ff36b22163e31cb17cde`.
+- AAB: 54,180,280 bytes, SHA-256
+  `2113c14e0b35bbaee739d8619026148ade500737be05d4b2891afed299412bcb`;
+  `jarsigner` verified.
+- Both APKs signed by `CN=Voltly Release` (certificate SHA-256 `543dc7a8…d641`).
+- Workflow run `39840646778` succeeded (format, analyze, Dart and Kotlin tests,
+  signed builds).
+
 ## 2026-10-23 — Lock-screen charging screen
 
 **Milestone:** Owner-approved addition outside `plan.md` (see

@@ -2,9 +2,17 @@
 
 **Last updated:** 2026-10-23
 **Milestone:** Phase 4 — Estimates (increment 1 complete; physical-device validation pending)
-**Project version:** `0.9.0+9` (versionCode 9)
+**Project version:** `0.10.0+10` (versionCode 10)
 
 ## Release
+
+- Latest: stable `v0.10.0` (commit `9e53898`), published at the owner's
+  request with physical-device and TalkBack validation still outstanding.
+  https://github.com/ranababu1/voltly/releases/tag/v0.10.0 — universal APK
+  54.7 MB (SHA-256 `fe68ab42…d099`), arm64 APK 18.9 MB (`7b333442…7cde`,
+  for the S25 Ultra and Moto Edge 70 Fusion), AAB 54.2 MB (`2113c14e…bcb`).
+  All downloaded again and signature-verified. Details in `changelog.md`.
+- Previous release details follow.
 
 - Tag: `v0.9.0-preview` (pre-release), commit `8eacc32`
 - Release: https://github.com/ranababu1/voltly/releases/tag/v0.9.0-preview
@@ -220,7 +228,6 @@ cannot install on this x86_64 emulator.
 - Charging screen: metrics refresh only on battery broadcasts; return to a
   secure keyguard and OEM behaviour are unverified (AVD lock is None). Play
   submission needs `specialUse` FGS and full-screen-intent declarations.
-- The `v0.9.0-preview` release predates the charging screen.
 
 - Physical-device telemetry validation is still pending. Emulator values prove
   the channel, parsing and UI pipeline, not hardware-specific sign, units or
