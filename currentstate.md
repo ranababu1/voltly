@@ -280,6 +280,10 @@ observations and is covered by automated tests. The dashboard also matched
   bump and `docs/estimates.md`.
 - Phase 4 estimate-docs commit `4a11d09` was pushed after it; the remote
   `refs/heads/main` resolved to the same commit.
+- Phase 4 stale-estimate fix `7ea7f50` was pushed on 2026-10-22; it adds one-shot
+  invalidation at the five-minute freshness boundary and updates the build
+  hashes in the documentation. The remote tip matched the local tip before this
+  documentation update.
 - Verify the current tip with `git status -sb` and
   `git ls-remote --heads origin main`.
 - `plan.md` and `instructions.md` are preserved at the root unchanged.
