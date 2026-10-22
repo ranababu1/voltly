@@ -6,27 +6,30 @@ Voltly is an Android-first battery-monitoring and charging-analytics app. It
 presents device-reported telemetry honestly, keeps history on the device, and
 never substitutes guessed or demo values for real readings.
 
-> **Status: Phase 3 implementation complete — session detail and stored trends.**
+> **Status: Phase 4 increment 1 complete — evidence-based time estimates.**
 > The dashboard renders live device telemetry with accessible semantics,
 > explicit availability/provenance/stale/error states, calculated battery-side
 > power, a reduce-motion-aware charging pulse, and background pause/resume of
 > acquisition. Live sessions persist locally, restore after restart, and appear
 > in a history list. Tapping a session shows its stored summary and gap-aware
-> level/current/temperature/power trends without interpolation. Alerts and
-> estimates are next. Physical-device and manual screen-reader validation remain
-> pending.
+> level/current/temperature/power trends without interpolation. The active-session
+> card now projects time to full or empty only from a fresh, contiguous sample
+> window and withholds the number when evidence is insufficient. Alerts and
+> health/capacity estimates are next. Physical-device and manual screen-reader
+> validation remain pending.
 >
 > **Last published build:** `v0.6.0` signed preview (universal and `arm64-v8a`).
-> The current development version is `0.8.0+8`; it is not yet published.
+> The current development version is `0.9.0+9`; it is not yet published.
 
 ## Scope
 
 - Android 8.0+ (API 26), phone-first. No iOS target.
 - Local-first and offline. No accounts, backend, ads or analytics SDKs.
 - Dark-only, AMOLED-friendly surfaces with restrained mint accents.
-- Live telemetry, live session persistence, a local session-history list and
-  stored-sample trend charts are implemented. Alerts and estimates are planned
-  in later milestones. See `plan.md` for the authoritative scope.
+- Live telemetry, live session persistence, a local session-history list,
+  stored-sample trend charts and evidence-based active-session time estimates
+  are implemented. Alerts and health/capacity estimates are planned in later
+  milestones. See `plan.md` for the authoritative scope.
 
 ## Toolchain
 
@@ -67,8 +70,8 @@ flutter run
   `Voltly-v0.6.0-arm64-v8a.apk`.
   [GitHub Release](https://github.com/ranababu1/voltly/releases/tag/v0.6.0)
 
-- **Current development:** `0.8.0+8` (session detail and stored trend charts;
-  not yet published as a GitHub Release).
+- **Current development:** `0.9.0+9` (evidence-based active-session time
+  estimates; not yet published as a GitHub Release).
 
 Release assets are signed with the Voltly production key. See
 `docs/release.md` for signing, verification and publication rules. Future `v*`
@@ -87,19 +90,20 @@ cd ..
 flutter build apk --debug
 ```
 
-Last recorded results (2026-10-22, Phase 3 session detail/charts):
+Last recorded results (2026-10-22, Phase 4 increment 1 estimates):
 
 - `flutter analyze` — no issues.
-- `flutter test` — 111/111 passed (16 contract parsing, 7 power, 6 channel,
+- `flutter test` — 135/135 passed (16 contract parsing, 7 power, 6 channel,
   6 diagnostics, 11 dashboard, 2 lifecycle provider, 1 motion, 2 app/lifecycle,
   14 session tracker, 2 session sample, 13 persistence, 6 coordinator,
-  5 session providers, 7 history UI, 6 chart data, 7 session detail).
+  7 session providers, 7 history UI, 6 chart data, 7 session detail,
+  16 time-estimate, 6 estimate-card).
 - `.\gradlew.bat :app:testDebugUnitTest` — 13/13 Kotlin tests passed with `--rerun-tasks` (native code
   unchanged in this slice).
-- `flutter build apk --debug` — succeeded at version `0.8.0+8`.
-- `flutter build apk --release` — succeeded (51.5 MB, production-signed).
+- `flutter build apk --debug` — succeeded at version `0.9.0+9`.
+- `flutter build apk --release` — succeeded (production-signed).
 - `flutter build apk --release --split-per-abi --target-platform android-arm64`
-  — succeeded (17.8 MB, production-signed).
+  — succeeded (production-signed).
 - Release APKs remain production-signed; no `INTERNET` permission.
 - Persistence tests cover schema/index creation, transaction rollback,
   unavailable-value mapping, duplicate samples, duplicate active recovery,
@@ -111,15 +115,24 @@ Last recorded results (2026-10-22, Phase 3 session detail/charts):
 - Detail/chart tests cover gap and unavailable-value segmentation, no-data
   states, min/max/latest summaries, retained-sample charts, not-found/error
   states, semantics and 2× text.
-- Release APKs are signed with `CN=Voltly Release, O=Voltly, C=US`; SHA-256
+- Estimate tests cover valid charging/discharging, a reached target, minimum
+  sample/window rules, gaps, unavailable levels/states, stale data, completed
+  sessions, noisy/contradictory levels, pruning, the 24-hour cap, active-session
+  provider retrieval, unavailable reasons, semantics and 2× text.
+- Release APKs are signed with `CN=Voltly Release, O=Voltly, C=US`; certificate
+  SHA-256
   `54:3D:C7:A8:C3:D4:E3:3D:63:E8:18:0F:09:1F:2A:BD:07:9D:10:2D:3E:32:E8:71:50:38:8F:04:FE:34:D6:41`.
-  Universal is 51.5 MB; arm64 is 17.8 MB.
-- The `0.8.0` universal APK was installed on the Pixel 10a AVD, cold-launched,
-  and displayed simulated live values (42%, Charging, AC). Charging sessions
-  showed a real active session, and its detail screen showed the stored summary
-  plus gap-aware battery trend semantics (3 stored samples, 2 sampling breaks).
-  The arm64 APK was built and signature/ABI-checked, but cannot be installed on
-  the x86_64 emulator.
+  Universal is 51.5 MB; arm64 is 17.8 MB. APK SHA-256:
+  universal `E7317B722E90CC30555B0F6ABECA3534D16003B9ACE9EB4EBE478826ADE65400`,
+  arm64 `F6FFD58588720B71F2C958CD5CD51E6BC3BB19A00C9FD421A2DDA980BD8C751C`.
+- The `0.9.0` universal APK was installed on the Pixel 10a AVD, cold-launched,
+  and displayed simulated live values (42%, Charging, AC). The active session
+  exposed the estimate card in its withheld state with the reason "at least 3
+  stored samples are needed; 1 available", plus the screen-reader label
+  "Battery time estimate unavailable." A calculated estimate requires ten
+  minutes of observations and is covered by estimator/card tests; the emulator
+  smoke test did not wait for that window. The arm64 APK was built and
+  signature/ABI-checked, but cannot be installed on the x86_64 emulator.
 - The dashboard was previously validated against `dumpsys battery` at 100%,
   "Not charging", 5.00 V, 25.0 °C, 10.0 mAh and 4.50 W calculated.
 - Live update test: simulated `level 42`, `status 2` and `ac 1` via
@@ -158,7 +171,9 @@ lib/
       session_coordinator.dart      Serialized live tracker/store coordinator
       session_detail.dart           Stored session + retained samples
       session_chart_data.dart       Gap-aware chart points and summaries
-      session_providers.dart        Tracking/detail/history providers
+      battery_time_estimate.dart    Evidence-based time-to-full/empty estimator
+      estimate_presentation.dart    Estimate labels, coverage notes and semantics
+      session_providers.dart        Tracking/detail/history/estimate providers
       session_presentation.dart     Honest session labels and formatting
     persistence/
       app_database.dart             Drift schema v1, migrations and file opener
@@ -177,11 +192,12 @@ lib/
     sessions/
       session_history_screen.dart   Local session list and honest states
       session_detail_screen.dart    Stored summary and sample-backed trends
+      session_estimate_card.dart    Active-session estimate or unavailable reason
       session_trend_chart.dart      Gap-aware custom-painted charts
       session_widgets.dart          Storage-error banner
 test/
   core/telemetry/                   Contract, power, channel and lifecycle tests
-  core/sessions/                    Tracker, coordinator, detail and chart tests
+  core/sessions/                    Tracker, coordinator, detail, chart and estimate tests
   core/persistence/                 Schema, repository, recovery and retention tests
   features/dashboard/               Dashboard, diagnostics, motion and semantics
   features/sessions/                History, detail, charts, states and large text
@@ -193,6 +209,7 @@ android/app/src/main/kotlin/com/voltly/
 docs/
   telemetry-contract.md             Versioned Android-to-Dart contract
   persistence.md                    Schema v1, recovery and retention policy
+  estimates.md                      Evidence rules for time-to-full/empty estimates
 ```
 
 Feature directories are added only when a milestone needs them.
@@ -255,8 +272,13 @@ Feature directories are added only when a milestone needs them.
   are written atomically, availability/provenance is preserved, active sessions
   are recovered after restart, and bounded retention plus delete-all are
   implemented. See `docs/persistence.md`.
-- **Estimates:** deferred until real captured data exists. Estimates will be
-  labeled and withheld when evidence is insufficient.
+- **Time estimates:** the dashboard's active-session card projects time to full
+  or empty only from a fresh, contiguous 10–30-minute window of stored samples.
+  It requires an available charging state, at least three samples, no gap over
+  five minutes and a level change in the expected direction. The result is
+  rounded, labelled approximate and shows sample count/window; it is withheld
+  with an explicit reason when evidence is insufficient. It is not charger input
+  power, capacity or battery health. See `docs/estimates.md`.
 
 ## Privacy and permissions
 
@@ -278,7 +300,7 @@ Feature directories are added only when a milestone needs them.
 ## Versioning
 
 `pubspec.yaml` uses semantic-style `MAJOR.MINOR.PATCH+BUILD`. The project is
-pre-1.0 during development (`0.8.0+8` now). Build numbers increment for each
+pre-1.0 during development (`0.9.0+9` now). Build numbers increment for each
 distributed release candidate. The first signed preview tag is `v0.6.0`.
 Tag and release conventions are defined in `instructions.md` §17.
 
@@ -288,6 +310,7 @@ Tag and release conventions are defined in `instructions.md` §17.
 - `instructions.md` — engineering, testing, Git and release rules.
 - `docs/telemetry-contract.md` — versioned native/Dart telemetry contract.
 - `docs/persistence.md` — schema v1, transactions, recovery and retention policy.
+- `docs/estimates.md` — evidence rules, projection formula and unavailable states.
 - `docs/release.md` — signing, APK naming, verification and release safety.
 - `changelog.md` — chronological record of meaningful changes.
 - `currentstate.md` — factual snapshot, blockers and the next task.
@@ -304,15 +327,20 @@ Tag and release conventions are defined in `instructions.md` §17.
   labels are implemented. Manual TalkBack/screen-reader validation and
   physical-device testing remain pending.
 - The app is dark-only by design; no light theme is included.
-- Session detail and stored-sample trend charts are implemented. Alerts,
-  health/capacity estimates and other Phase 4 features remain pending.
-- The last published APK is `v0.6.0`; it predates live session tracking, history
-  and charts. The current development version `0.8.0+8` has not been published.
+- Session detail, stored-sample trend charts and active-session time estimates
+  are implemented. Alerts, health/capacity estimates and other Phase 4 features
+  remain pending.
+- Time estimates use only a fresh, contiguous recent sample window and are
+  withheld when evidence is inadequate. They are projections, not guarantees,
+  charger ratings, capacity measurements or battery-health claims.
+- The last published APK is `v0.6.0`; it predates live session tracking, history,
+  charts and estimates. The current development version `0.9.0+9` has not been
+  published.
 - Average current, charge counter and other metrics are unsupported on some
   devices. The contract reports availability per metric; this is not a bug.
 - Release signing is configured with a dedicated Voltly key stored outside
   source control. The four signing values are also repository Actions secrets.
   Loss of the key/credentials would prevent updates over an installed release.
-- `v0.6.0` is a signed pre-release because session history UI and
+- `v0.6.0` is a signed pre-release because session history, estimates and
   physical-device validation are still pending. A stable release requires the
   remaining release checks.

@@ -2,6 +2,77 @@
 
 Newest-first record of meaningful implementation changes.
 
+## 2026-10-22 — Phase 4 increment 1: evidence-based time estimates
+
+**Milestone:** Phase 4 — Estimates (increment 1 complete)
+
+**Summary**
+
+- Added a pure `BatteryTimeEstimator` that projects time to full/empty from the
+  most recent 30 minutes of retained samples. It requires at least three
+  samples, 10 minutes of coverage, a latest sample no older than five minutes,
+  no gap over five minutes, available levels and charging states throughout the
+  window, and a level change in the expected direction.
+- Added explicit unavailable results for insufficient samples/coverage, stale
+  data, gaps, changed or unavailable state, unavailable levels, pruning that
+  leaves too few samples, completed/inactive sessions, full/not-charging states,
+  contradictory direction, and projections over 24 hours. No branch substitutes
+  zero, charger power, capacity or battery health.
+- Added an active-session estimate provider and dashboard card. The card shows
+  "Time to full" or "Time to empty", an "Estimated" badge, a five-minute-rounded
+  approximate duration, sample/window coverage, steady-rate assumption, pruning
+  or earlier-gap notes, and a statement that this is not charger input power,
+  capacity or battery health. When evidence is inadequate it shows the reason
+  instead of a number.
+- Added 16 estimator tests, 6 estimate-card tests and 2 provider tests covering
+  valid charging/discharging, target reached, short windows, gaps, unavailable
+  levels/states, stale samples, inactive sessions, noisy/contradictory levels,
+  pruning, the 24-hour cap, semantics and 2× text.
+- Added `docs/estimates.md` documenting the evidence rules, formula, unavailable
+  reasons, pruning/gap semantics and limits.
+- Bumped the development version to `0.9.0+9`.
+
+**Key files**
+
+- `lib/core/sessions/battery_time_estimate.dart`
+- `lib/core/sessions/estimate_presentation.dart`
+- `lib/core/sessions/session_providers.dart`
+- `lib/features/sessions/session_estimate_card.dart`
+- `lib/features/dashboard/dashboard_screen.dart`
+- `test/core/sessions/battery_time_estimate_test.dart`
+- `test/features/sessions/session_estimate_card_test.dart`
+- `docs/estimates.md`
+
+**Verification**
+
+- `dart format lib test` — clean.
+- `flutter analyze` — no issues.
+- `flutter test` — 135/135 passed.
+- `.\gradlew.bat :app:testDebugUnitTest --rerun-tasks` — 13/13 Kotlin tests
+  passed; native code unchanged.
+- `flutter build apk --debug` — succeeded at `0.9.0+9`.
+- `flutter build apk --release` — succeeded; universal 51.5 MB,
+  production-signed.
+- `flutter build apk --release --split-per-abi --target-platform android-arm64`
+  — succeeded; arm64 17.8 MB, production-signed.
+- Universal `0.9.0` installed on the Pixel 10a AVD. The active session showed the
+  estimate card withheld with "at least 3 stored samples are needed; 1
+  available" and semantics "Battery time estimate unavailable." A calculated
+  estimate requires 10 minutes of observations and is covered by automated
+  tests; the smoke test did not wait for that window.
+- Both release APKs verified with the Voltly production certificate; no
+  `INTERNET` permission.
+
+**Known limitations**
+
+- Physical-device telemetry and manual TalkBack validation remain pending.
+- Estimates are one-point recent projections, not guarantees, charger ratings,
+  capacity measurements or battery-health claims. Completed sessions do not show
+  an estimate.
+- Alerts, settings and health/capacity estimates are not implemented.
+- The published GitHub Release `v0.6.0` predates sessions, history, charts and
+  estimates; `0.9.0+9` is not published. No AAB is built.
+
 ## 2026-10-22 — Phase 3 complete: session detail and stored trend charts
 
 **Milestone:** Phase 3 — Charging Sessions (implementation complete)
