@@ -101,6 +101,11 @@ The dashboard shows `SessionEstimateCard` only while a session is active:
 - pruning/earlier-gap notes when applicable;
 - an explicit "Time estimate unavailable" card and reason when withheld.
 
+When an estimate is visible, the provider schedules a one-shot invalidation for
+the moment the latest sample crosses the five-minute freshness threshold. The
+card then recalculates and shows the stale-data reason instead of leaving an old
+projection on screen. No polling or background wake-up is introduced.
+
 The card has a concise semantics label containing the estimate, sample count,
 window, assumptions and limits. It is tested at 320×640 with 2× text scaling.
 

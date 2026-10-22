@@ -19,9 +19,9 @@
 - Both uploaded assets were downloaded again and their SHA-256 hashes matched
   the local signed builds.
 - Local `0.9.0+9` release APKs: universal 53,968,882 bytes (51.5 MB), SHA-256
-  `E7317B722E90CC30555B0F6ABECA3534D16003B9ACE9EB4EBE478826ADE65400`; arm64
+  `DEB298D391200141548AF75E904E30DA8D52589909116BF7E5299FE51DED990C`; arm64
   18,716,366 bytes (17.8 MB), SHA-256
-  `F6FFD58588720B71F2C958CD5CD51E6BC3BB19A00C9FD421A2DDA980BD8C751C`.
+  `CCD333D8BE6C700BE243FD358B2F543A30FB4E28713EEFDC07DF1A97881DE7BB`.
   Both are production-signed with the certificate above and have no `INTERNET`
   permission.
 - A tag-triggered release workflow (`.github/workflows/release.yml`) is added for
@@ -50,7 +50,7 @@
 | Session history UI | Dashboard entry; active/completed/interrupted, gap, partial and pruned labels; 2× text; semantics | 7 history UI tests; emulator active session |
 | Session detail | Stored summary by id, loading/not-found/error, navigation from history | 7 detail tests; emulator detail screen |
 | Stored trend charts | Level/current/temperature/power from retained samples; gap/unavailable breaks; no interpolation; chart semantics | 6 chart-data tests; 2× text; emulator semantics |
-| Time-to-full/empty estimator | Pure 10–30-minute retained window; fresh/consecutive samples required; consistent state and direction; 24-hour cap; no capacity/health/charger substitution | 16 estimator tests; 2 estimate provider cases |
+| Time-to-full/empty estimator | Pure 10–30-minute retained window; fresh/consecutive samples required; consistent state and direction; 24-hour cap; one-shot stale invalidation; no capacity/health/charger substitution | 16 estimator tests; 2 estimate provider cases |
 | Estimate UI | Active-session card; approximate label, coverage, assumptions, pruning/gap notes; explicit unavailable reason; semantics; 2× text | 6 estimate-card tests; emulator withheld state |
 | Local persistence | Drift schema v1, indexes, foreign keys, nullable values, availability/provenance metadata | 13 persistence tests; schema inspection |
 | Transactional repository | Atomic session/sample writes, duplicate handling, restart recovery, duplicate-active reconciliation, delete-all | Repository tests |
@@ -278,6 +278,8 @@ observations and is covered by automated tests. The dashboard also matched
   `refs/heads/main` resolved to the same commit before this documentation
   update. It includes the estimator, provider, dashboard card, tests, version
   bump and `docs/estimates.md`.
+- Phase 4 estimate-docs commit `4a11d09` was pushed after it; the remote
+  `refs/heads/main` resolved to the same commit.
 - Verify the current tip with `git status -sb` and
   `git ls-remote --heads origin main`.
 - `plan.md` and `instructions.md` are preserved at the root unchanged.

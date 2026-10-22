@@ -163,10 +163,28 @@ final activeSessionEstimateProvider =
         final List<TelemetrySample> samples = await store.samplesForSession(
           sessionId,
         );
-        return BatteryTimeEstimator.estimate(
+        final BatteryEstimateResult result = BatteryTimeEstimator.estimate(
           session: session,
           samples: samples,
         );
+        if (result.isAvailable && samples.isNotEmpty) {
+          final DateTime latestObservedAt = samples
+              .map((TelemetrySample sample) => sample.observedAt)
+              .reduce((DateTime a, DateTime b) => a.isAfter(b) ? a : b);
+          final Duration untilStale = latestObservedAt
+              .add(BatteryTimeEstimator.maximumSampleAge)
+              .difference(DateTime.now());
+          if (untilStale > Duration.zero) {
+            final Timer timer = Timer(
+              untilStale + const Duration(seconds: 1),
+              () {
+                if (ref.mounted) ref.invalidateSelf();
+              },
+            );
+            ref.onDispose(timer.cancel);
+          }
+        }
+        return result;
       } catch (error) {
         return BatteryEstimateResult.unavailable(
           'Stored session samples are unavailable (${error.runtimeType}).',

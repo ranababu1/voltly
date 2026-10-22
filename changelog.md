@@ -23,7 +23,8 @@ Newest-first record of meaningful implementation changes.
   approximate duration, sample/window coverage, steady-rate assumption, pruning
   or earlier-gap notes, and a statement that this is not charger input power,
   capacity or battery health. When evidence is inadequate it shows the reason
-  instead of a number.
+  instead of a number. A one-shot invalidation withholds an already-visible
+  estimate as soon as its latest sample crosses the five-minute freshness limit.
 - Added 16 estimator tests, 6 estimate-card tests and 2 provider tests covering
   valid charging/discharging, target reached, short windows, gaps, unavailable
   levels/states, stale samples, inactive sessions, noisy/contradictory levels,
@@ -56,7 +57,7 @@ Newest-first record of meaningful implementation changes.
 - `flutter build apk --release --split-per-abi --target-platform android-arm64`
   — succeeded; arm64 17.8 MB, production-signed.
 - Universal `0.9.0` installed on the Pixel 10a AVD. The active session showed the
-  estimate card withheld with "at least 3 stored samples are needed; 1
+  estimate card withheld with "at least 3 stored samples are needed; 2
   available" and semantics "Battery time estimate unavailable." A calculated
   estimate requires 10 minutes of observations and is covered by automated
   tests; the smoke test did not wait for that window.

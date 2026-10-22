@@ -123,12 +123,12 @@ Last recorded results (2026-10-22, Phase 4 increment 1 estimates):
   SHA-256
   `54:3D:C7:A8:C3:D4:E3:3D:63:E8:18:0F:09:1F:2A:BD:07:9D:10:2D:3E:32:E8:71:50:38:8F:04:FE:34:D6:41`.
   Universal is 51.5 MB; arm64 is 17.8 MB. APK SHA-256:
-  universal `E7317B722E90CC30555B0F6ABECA3534D16003B9ACE9EB4EBE478826ADE65400`,
-  arm64 `F6FFD58588720B71F2C958CD5CD51E6BC3BB19A00C9FD421A2DDA980BD8C751C`.
+  universal `DEB298D391200141548AF75E904E30DA8D52589909116BF7E5299FE51DED990C`,
+  arm64 `CCD333D8BE6C700BE243FD358B2F543A30FB4E28713EEFDC07DF1A97881DE7BB`.
 - The `0.9.0` universal APK was installed on the Pixel 10a AVD, cold-launched,
   and displayed simulated live values (42%, Charging, AC). The active session
   exposed the estimate card in its withheld state with the reason "at least 3
-  stored samples are needed; 1 available", plus the screen-reader label
+  stored samples are needed; 2 available", plus the screen-reader label
   "Battery time estimate unavailable." A calculated estimate requires ten
   minutes of observations and is covered by estimator/card tests; the emulator
   smoke test did not wait for that window. The arm64 APK was built and
