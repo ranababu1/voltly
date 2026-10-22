@@ -100,6 +100,12 @@ jobs:
           cp build/app/outputs/bundle/release/app-release.aab \
             "release-assets/Voltly-v${RELEASE_VERSION}.aab"
 
+          if [[ "$RELEASE_VERSION" == *-* ]]; then
+            RELEASE_STATUS="This is a preview release. Physical-device telemetry validation and human TalkBack validation remain outstanding."
+          else
+            RELEASE_STATUS="This is a stable release. Physical-device telemetry and human TalkBack validation must be complete for this build."
+          fi
+
           cat > release-assets/download-guide.md <<EOF
           ### Which file should I download?
 
@@ -109,10 +115,8 @@ jobs:
 
           ### Release status
 
-          This release is a preview: physical-device telemetry validation and manual
-          TalkBack validation remain outstanding. The Android APKs are signed with the
-          Voltly production key. The AAB is a separate Google Play artifact and does not
-          replace either APK.
+          ${RELEASE_STATUS} The Android APKs are signed with the Voltly production key.
+          The AAB is a separate Google Play artifact and does not replace either APK.
 
           ### Known limitations
 

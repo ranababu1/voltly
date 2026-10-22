@@ -18,8 +18,10 @@ never substitutes guessed or demo values for real readings.
 > health/capacity estimates are next. Physical-device and manual screen-reader
 > validation remain pending.
 >
-> **Last published build:** `v0.6.0` signed preview (universal and `arm64-v8a`).
-> The current development version is `0.9.0+9`; it is not yet published.
+> **Last published build:** `v0.9.0-preview` signed pre-release (universal APK,
+> `arm64-v8a` APK and AAB). The current development version is `0.9.0+9`, and it
+> is published as that preview. Physical-device and human TalkBack validation
+> remain pending.
 
 ## Scope
 
@@ -66,16 +68,23 @@ flutter run
 
 ## Releases
 
+- **v0.9.0-preview (pre-release):**
+  `Voltly-v0.9.0-preview-universal.apk`,
+  `Voltly-v0.9.0-preview-arm64-v8a.apk` and
+  `Voltly-v0.9.0-preview.aab` (Google Play artifact, not installable).
+  [GitHub Release](https://github.com/ranababu1/voltly/releases/tag/v0.9.0-preview)
+
 - **v0.6.0 (pre-release):** `Voltly-v0.6.0-universal.apk` and
   `Voltly-v0.6.0-arm64-v8a.apk`.
   [GitHub Release](https://github.com/ranababu1/voltly/releases/tag/v0.6.0)
 
-- **Current development:** `0.9.0+9` (evidence-based active-session time
-  estimates; not yet published as a GitHub Release).
+- **Current development:** `0.9.0+9`, published as the `v0.9.0-preview`
+  pre-release.
 
 Release assets are signed with the Voltly production key. See
 `docs/release.md` for signing, verification and publication rules. Future `v*`
-tags use `.github/workflows/release.yml` to build and publish both APKs.
+tags use `.github/workflows/release.yml` to build and publish both APKs and the
+AAB.
 
 ## Verification
 
@@ -106,9 +115,9 @@ Last recorded results (2026-10-22, Phase 4 increment 1 estimates):
 - `flutter build apk --release` — succeeded (production-signed).
 - `flutter build apk --release --split-per-abi --target-platform android-arm64`
   — succeeded (production-signed).
-- `flutter build appbundle --release` — succeeded; `app-release.aab` is 51.1 MB
-  (53,570,612 bytes), production-signed with the Voltly certificate, SHA-256
-  `79D357D3A292FE0838F991145C512EDD1521FC4EB2150C5C4A1308DDEE10B4DA`. It is a
+- `flutter build appbundle --release` — succeeded; the published AAB is 51.1 MB
+  (53,558,550 bytes), production-signed with the Voltly certificate, SHA-256
+  `1D137BE4FB509E48B7344899824B6308769D57D83A129DB0CD3445CC6328E958`. It is a
   Google Play distribution artifact and is not directly installable.
 - Release APKs remain production-signed; no `INTERNET` permission.
 - Persistence tests cover schema/index creation, transaction rollback,
@@ -128,17 +137,23 @@ Last recorded results (2026-10-22, Phase 4 increment 1 estimates):
 - Release APKs are signed with `CN=Voltly Release, O=Voltly, C=US`; certificate
   SHA-256
   `54:3D:C7:A8:C3:D4:E3:3D:63:E8:18:0F:09:1F:2A:BD:07:9D:10:2D:3E:32:E8:71:50:38:8F:04:FE:34:D6:41`.
-  Universal is 51.5 MB; arm64 is 17.8 MB. APK SHA-256:
-  universal `DEB298D391200141548AF75E904E30DA8D52589909116BF7E5299FE51DED990C`,
-  arm64 `CCD333D8BE6C700BE243FD358B2F543A30FB4E28713EEFDC07DF1A97881DE7BB`.
-- The `0.9.0` universal APK was installed on the Pixel 10a AVD, cold-launched,
-  and displayed simulated live values (42%, Charging, AC). The active session
+  Universal is 51.5 MB; arm64 is 17.8 MB. Published APK SHA-256:
+  universal `A0A7DD579C690A5CB5C09A361E1C73EDDD0640586E9E536C48121520B59C59D9`,
+  arm64 `47C3AB6B44C66A81794BA874307FF066BCC45588897C4FC6CC7ACFE279DB0096`.
+- The published `v0.9.0-preview` universal APK was downloaded again, verified
+  with `apksigner`, installed on the Pixel 10a AVD, and cold-launched. It
+  displayed simulated live values (42%, Charging, AC); the active session
   exposed the estimate card in its withheld state with the reason "at least 3
   stored samples are needed; 2 available", plus the screen-reader label
   "Battery time estimate unavailable." A calculated estimate requires ten
   minutes of observations and is covered by estimator/card tests; the emulator
-  smoke test did not wait for that window. The arm64 APK was built and
-  signature/ABI-checked, but cannot be installed on the x86_64 emulator.
+  smoke test did not wait for that window. The arm64 APK was signature/ABI-
+  checked but cannot be installed on the x86_64 emulator. The AAB was
+  signature-checked with `jarsigner`.
+- TalkBack was installed and enabled on the API 37 emulator; TTS synthesis
+  requests were observed while launching and traversing the app, and the
+  semantics tree contained the expected labels. Human audio review and
+  physical-device TalkBack validation remain pending.
 - The dashboard was previously validated against `dumpsys battery` at 100%,
   "Not charging", 5.00 V, 25.0 °C, 10.0 mAh and 4.50 W calculated.
 - Live update test: simulated `level 42`, `status 2` and `ac 1` via
@@ -307,8 +322,9 @@ Feature directories are added only when a milestone needs them.
 
 `pubspec.yaml` uses semantic-style `MAJOR.MINOR.PATCH+BUILD`. The project is
 pre-1.0 during development (`0.9.0+9` now). Build numbers increment for each
-distributed release candidate. The first signed preview tag is `v0.6.0`.
-Tag and release conventions are defined in `instructions.md` §17.
+distributed release candidate. The first signed preview tag was `v0.6.0`; the
+latest is the `v0.9.0-preview` pre-release. Tag and release conventions are
+defined in `instructions.md` §17 and `docs/release.md`.
 
 ## Documentation
 
@@ -330,25 +346,27 @@ Tag and release conventions are defined in `instructions.md` §17.
   that device-reported value faithfully. This validates the pipeline, not the
   hardware sign convention.
 - The dashboard core, lifecycle pause/resume, charging pulse and semantics
-  labels are implemented. Manual TalkBack/screen-reader validation and
-  physical-device testing remain pending.
+  labels are implemented. TalkBack was enabled on the API 37 emulator with TTS
+  synthesis observed, but human audio review and physical-device TalkBack
+  validation remain pending.
 - The app is dark-only by design; no light theme is included.
-- A signed AAB exists for a future Google Play submission, but it has not been
-  uploaded to a store. GitHub Releases still require the two APK assets.
+- A signed AAB is published with `v0.9.0-preview` for a future Google Play
+  submission, but it has not been uploaded to a store. GitHub Releases still
+  require the two APK assets.
 - Session detail, stored-sample trend charts and active-session time estimates
   are implemented. Alerts, health/capacity estimates and other Phase 4 features
   remain pending.
 - Time estimates use only a fresh, contiguous recent sample window and are
   withheld when evidence is inadequate. They are projections, not guarantees,
   charger ratings, capacity measurements or battery-health claims.
-- The last published APK is `v0.6.0`; it predates live session tracking, history,
-  charts and estimates. The current development version `0.9.0+9` has not been
-  published.
+- The last published build is `v0.9.0-preview`, a pre-release containing live
+  session tracking, history, charts, estimates and a signed AAB. Physical-device
+  telemetry and human TalkBack validation remain pending, so it is not stable.
 - Average current, charge counter and other metrics are unsupported on some
   devices. The contract reports availability per metric; this is not a bug.
 - Release signing is configured with a dedicated Voltly key stored outside
   source control. The four signing values are also repository Actions secrets.
   Loss of the key/credentials would prevent updates over an installed release.
-- `v0.6.0` is a signed pre-release because session history, estimates and
-  physical-device validation are still pending. A stable release requires the
+- `v0.9.0-preview` is a signed pre-release because physical-device telemetry and
+  human TalkBack validation are still pending. A stable release requires the
   remaining release checks.

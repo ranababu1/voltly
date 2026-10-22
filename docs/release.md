@@ -62,6 +62,31 @@ installable APK.
 `v0.6.0` was published manually before the workflow was added; its signed assets
 were verified by downloading them again.
 
+## Published v0.9.0-preview
+
+- Tag: `v0.9.0-preview` at commit `8eacc32`
+- Release: https://github.com/ranababu1/voltly/releases/tag/v0.9.0-preview
+- Assets:
+  - `Voltly-v0.9.0-preview-universal.apk` — 53,968,846 bytes, SHA-256
+    `A0A7DD579C690A5CB5C09A361E1C73EDDD0640586E9E536C48121520B59C59D9`
+  - `Voltly-v0.9.0-preview-arm64-v8a.apk` — 18,716,326 bytes, SHA-256
+    `47C3AB6B44C66A81794BA874307FF066BCC45588897C4FC6CC7ACFE279DB0096`
+  - `Voltly-v0.9.0-preview.aab` — 53,558,550 bytes, SHA-256
+    `1D137BE4FB509E48B7344899824B6308769D57D83A129DB0CD3445CC6328E958`
+- GitHub marks it as a pre-release because physical-device telemetry validation
+  and human TalkBack validation remain outstanding.
+- All three assets were downloaded again. Both APKs pass `apksigner` with
+  `CN=Voltly Release`; the AAB passes `jarsigner`. The universal APK installed
+  and cold-launched on the Pixel 10a AVD. The arm64 APK was signature/ABI-checked
+  but cannot install on the x86_64 emulator. The AAB was not uploaded to Google
+  Play.
+- The workflow initially failed because the Gradle wrapper was ignored; commit
+  `8eacc32` tracks `gradlew`, `gradlew.bat` and `gradle-wrapper.jar`, and the
+  retagged run published successfully.
+
+This preview is not a stable release. Do not move the published tag or replace
+the assets.
+
 ## Safety
 
 - Do not upload debug-signed APKs.

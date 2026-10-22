@@ -2,6 +2,51 @@
 
 Newest-first record of meaningful implementation changes.
 
+## 2026-10-22 — v0.9.0-preview published with AAB
+
+**Milestone:** Phase 4 — Estimates (increment 1 preview release)
+
+**Summary**
+
+- Published the annotated `v0.9.0-preview` GitHub pre-release from commit
+  `8eacc32` at
+  https://github.com/ranababu1/voltly/releases/tag/v0.9.0-preview.
+- Assets: `Voltly-v0.9.0-preview-universal.apk`,
+  `Voltly-v0.9.0-preview-arm64-v8a.apk` and
+  `Voltly-v0.9.0-preview.aab` (Google Play distribution; not installable).
+- Extended the tag-triggered workflow to accept explicit `-preview` tags, build
+  and verify the AAB, and upload it alongside the two required APKs.
+- Tracked the Gradle wrapper (`gradlew`, `gradlew.bat`,
+  `gradle-wrapper.jar`) after the first workflow run exposed that CI had no
+  wrapper. The release was retagged after that fix; no release had been published
+  from the failed run.
+- Enabled TalkBack on the API 37 emulator and observed TTS synthesis plus the
+  expected semantics tree; human audio review and physical-device validation
+  remain pending.
+
+**Verification**
+
+- Production-signed assets, downloaded again from the release and verified:
+  - Universal APK: 53,968,846 bytes, SHA-256
+    `A0A7DD579C690A5CB5C09A361E1C73EDDD0640586E9E536C48121520B59C59D9`.
+  - arm64 APK: 18,716,326 bytes, SHA-256
+    `47C3AB6B44C66A81794BA874307FF066BCC45588897C4FC6CC7ACFE279DB0096`.
+  - AAB: 53,558,550 bytes, SHA-256
+    `1D137BE4FB509E48B7344899824B6308769D57D83A129DB0CD3445CC6328E958`.
+- Both APKs pass `apksigner` with the production certificate; the AAB passes
+  `jarsigner`.
+- Published universal APK installed and cold-launched on the Pixel 10a AVD; the
+  estimate card remained honestly withheld at two samples. The arm64 APK is
+  signature/ABI-checked but cannot install on the x86_64 emulator.
+
+**Known limitations**
+
+- Physical-device telemetry and human TalkBack validation remain pending, so
+  this is deliberately a pre-release.
+- The AAB has not been uploaded to Google Play.
+- Alerts, settings and health/capacity estimates remain future Phase 4 work.
+
+
 ## 2026-10-22 — Phase 4 increment 1: evidence-based time estimates
 
 **Milestone:** Phase 4 — Estimates (increment 1 complete)
@@ -57,10 +102,11 @@ Newest-first record of meaningful implementation changes.
   production-signed.
 - `flutter build apk --release --split-per-abi --target-platform android-arm64`
   — succeeded; arm64 17.8 MB, production-signed.
-- `flutter build appbundle --release` — succeeded; AAB 51.1 MB
+- `flutter build appbundle --release` — succeeded; local AAB 51.1 MB
   (53,570,612 bytes), production-signed, SHA-256
   `79D357D3A292FE0838F991145C512EDD1521FC4EB2150C5C4A1308DDEE10B4DA`.
-  The AAB is a Google Play artifact and does not replace the APK assets.
+  The published CI AAB hash is recorded in the release entry above. The AAB is a
+  Google Play artifact and does not replace the APK assets.
 - Universal `0.9.0` installed on the Pixel 10a AVD. The active session showed the
   estimate card withheld with "at least 3 stored samples are needed; 2
   available" and semantics "Battery time estimate unavailable." A calculated
