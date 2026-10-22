@@ -6,6 +6,8 @@ import 'package:voltly/core/persistence/persistence_providers.dart';
 import 'package:voltly/core/persistence/session_store.dart';
 import 'package:voltly/core/sessions/charging_session.dart';
 import 'package:voltly/core/sessions/session_coordinator.dart';
+import 'package:voltly/core/sessions/session_detail.dart';
+import 'package:voltly/core/sessions/telemetry_sample.dart';
 import 'package:voltly/core/telemetry/telemetry_models.dart';
 import 'package:voltly/core/telemetry/telemetry_providers.dart';
 
@@ -132,4 +134,16 @@ final sessionHistoryProvider =
     FutureProvider.autoDispose<List<ChargingSession>>((Ref ref) {
       final SessionStore store = ref.watch(sessionRepositoryProvider);
       return store.recentSessions(limit: 50);
+    });
+
+/// One stored session and its retained samples.
+final sessionDetailProvider = FutureProvider.autoDispose
+    .family<SessionDetail?, int>((Ref ref, int sessionId) async {
+      final SessionStore store = ref.watch(sessionRepositoryProvider);
+      final ChargingSession? session = await store.sessionById(sessionId);
+      if (session == null) return null;
+      final List<TelemetrySample> samples = await store.samplesForSession(
+        sessionId,
+      );
+      return SessionDetail(session: session, samples: samples);
     });

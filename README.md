@@ -6,27 +6,27 @@ Voltly is an Android-first battery-monitoring and charging-analytics app. It
 presents device-reported telemetry honestly, keeps history on the device, and
 never substitutes guessed or demo values for real readings.
 
-> **Status: Phase 3 (in progress) — live session history.**
+> **Status: Phase 3 implementation complete — session detail and stored trends.**
 > The dashboard renders live device telemetry with accessible semantics,
 > explicit availability/provenance/stale/error states, calculated battery-side
 > power, a reduce-motion-aware charging pulse, and background pause/resume of
-> acquisition. An app-scoped session coordinator now feeds real snapshots into
-> the tracker and Drift/SQLite repository, restores active sessions after
-> restart, and exposes a local session-history list with honest gap, interrupted
-> and pruned states. Session detail and trend charts are next. Physical-device
-> and manual screen-reader validation remain pending.
+> acquisition. Live sessions persist locally, restore after restart, and appear
+> in a history list. Tapping a session shows its stored summary and gap-aware
+> level/current/temperature/power trends without interpolation. Alerts and
+> estimates are next. Physical-device and manual screen-reader validation remain
+> pending.
 >
 > **Last published build:** `v0.6.0` signed preview (universal and `arm64-v8a`).
-> The current development version is `0.7.0+7`; it is not yet published.
+> The current development version is `0.8.0+8`; it is not yet published.
 
 ## Scope
 
 - Android 8.0+ (API 26), phone-first. No iOS target.
 - Local-first and offline. No accounts, backend, ads or analytics SDKs.
 - Dark-only, AMOLED-friendly surfaces with restrained mint accents.
-- Live telemetry, live session persistence and a local session-history list are
-  implemented. Session detail, charts, estimates and alerts are planned in later
-  milestones. See `plan.md` for the authoritative scope.
+- Live telemetry, live session persistence, a local session-history list and
+  stored-sample trend charts are implemented. Alerts and estimates are planned
+  in later milestones. See `plan.md` for the authoritative scope.
 
 ## Toolchain
 
@@ -67,8 +67,8 @@ flutter run
   `Voltly-v0.6.0-arm64-v8a.apk`.
   [GitHub Release](https://github.com/ranababu1/voltly/releases/tag/v0.6.0)
 
-- **Current development:** `0.7.0+7` (live session persistence and history
-  list; not yet published as a GitHub Release).
+- **Current development:** `0.8.0+8` (session detail and stored trend charts;
+  not yet published as a GitHub Release).
 
 Release assets are signed with the Voltly production key. See
 `docs/release.md` for signing, verification and publication rules. Future `v*`
@@ -87,17 +87,17 @@ cd ..
 flutter build apk --debug
 ```
 
-Last recorded results (2026-10-22, Phase 3 live session history):
+Last recorded results (2026-10-22, Phase 3 session detail/charts):
 
 - `flutter analyze` — no issues.
-- `flutter test` — 96/96 passed (16 contract parsing, 7 power, 6 channel,
+- `flutter test` — 111/111 passed (16 contract parsing, 7 power, 6 channel,
   6 diagnostics, 11 dashboard, 2 lifecycle provider, 1 motion, 2 app/lifecycle,
   14 session tracker, 2 session sample, 13 persistence, 6 coordinator,
-  4 session providers, 6 history UI).
+  5 session providers, 7 history UI, 6 chart data, 7 session detail).
 - `.\gradlew.bat :app:testDebugUnitTest` — 13/13 Kotlin tests passed with `--rerun-tasks` (native code
   unchanged in this slice).
-- `flutter build apk --debug` — succeeded at version `0.7.0+7`.
-- `flutter build apk --release` — succeeded (51.2 MB, production-signed).
+- `flutter build apk --debug` — succeeded at version `0.8.0+8`.
+- `flutter build apk --release` — succeeded (51.5 MB, production-signed).
 - `flutter build apk --release --split-per-abi --target-platform android-arm64`
   — succeeded (17.8 MB, production-signed).
 - Release APKs remain production-signed; no `INTERNET` permission.
@@ -108,12 +108,16 @@ Last recorded results (2026-10-22, Phase 3 live session history):
 - Live session tests cover coordinator serialization, restart recovery,
   append/start failure and retry, provider state/history refresh, storage-error
   banner, history loading/empty/error and honest gap/pruned labels.
+- Detail/chart tests cover gap and unavailable-value segmentation, no-data
+  states, min/max/latest summaries, retained-sample charts, not-found/error
+  states, semantics and 2× text.
 - Release APKs are signed with `CN=Voltly Release, O=Voltly, C=US`; SHA-256
   `54:3D:C7:A8:C3:D4:E3:3D:63:E8:18:0F:09:1F:2A:BD:07:9D:10:2D:3E:32:E8:71:50:38:8F:04:FE:34:D6:41`.
-  Universal is 51.2 MB; arm64 is 17.8 MB.
-- The `0.7.0` universal APK was installed on the Pixel 10a AVD, cold-launched,
-  and displayed simulated live values (42%, Charging, AC). The Charging sessions
-  screen showed a real active session: Recording, start level 42%, one sample.
+  Universal is 51.5 MB; arm64 is 17.8 MB.
+- The `0.8.0` universal APK was installed on the Pixel 10a AVD, cold-launched,
+  and displayed simulated live values (42%, Charging, AC). Charging sessions
+  showed a real active session, and its detail screen showed the stored summary
+  plus gap-aware battery trend semantics (3 stored samples, 2 sampling breaks).
   The arm64 APK was built and signature/ABI-checked, but cannot be installed on
   the x86_64 emulator.
 - The dashboard was previously validated against `dumpsys battery` at 100%,
@@ -152,7 +156,9 @@ lib/
       charging_session_tracker.dart Pure telemetry-to-session state machine
       telemetry_sample.dart         Snapshot captured within a session
       session_coordinator.dart      Serialized live tracker/store coordinator
-      session_providers.dart        Tracking state and recent-session providers
+      session_detail.dart           Stored session + retained samples
+      session_chart_data.dart       Gap-aware chart points and summaries
+      session_providers.dart        Tracking/detail/history providers
       session_presentation.dart     Honest session labels and formatting
     persistence/
       app_database.dart             Drift schema v1, migrations and file opener
@@ -170,13 +176,15 @@ lib/
       telemetry_presentation.dart   Shared formatting, badges and freshness
     sessions/
       session_history_screen.dart   Local session list and honest states
+      session_detail_screen.dart    Stored summary and sample-backed trends
+      session_trend_chart.dart      Gap-aware custom-painted charts
       session_widgets.dart          Storage-error banner
 test/
   core/telemetry/                   Contract, power, channel and lifecycle tests
-  core/sessions/                    Tracker, coordinator, provider and mapping tests
+  core/sessions/                    Tracker, coordinator, detail and chart tests
   core/persistence/                 Schema, repository, recovery and retention tests
   features/dashboard/               Dashboard, diagnostics, motion and semantics
-  features/sessions/                History list, states, semantics and large text
+  features/sessions/                History, detail, charts, states and large text
   support/                          Fixtures, fakes and app pump helper
   widget_test.dart                  App root, theme and lifecycle smoke tests
 android/app/src/main/kotlin/com/voltly/
@@ -235,14 +243,20 @@ Feature directories are added only when a milestone needs them.
   the last committed state.
 - **Session history:** the dashboard opens a local-only list of recent sessions.
   Active, completed and interrupted states are labelled; telemetry gaps,
-  interrupted endings and retention-pruned sample lists are visible. The list
-  never implies continuous sampling while Voltly was closed.
+  interrupted endings and retention-pruned sample lists are visible. Tapping a
+  card opens stored session detail. The list never implies continuous sampling
+  while Voltly was closed.
+- **Session detail and charts:** summary values come from the stored session;
+  level, current, temperature and calculated battery-side power charts use only
+  retained samples. Missing values and gaps over five minutes break the line, and
+  no values are interpolated. Chart summaries and screen-reader labels state the
+  stored range and gaps.
 - **Persistence:** Drift/SQLite schema v1 is live. Session summaries and samples
   are written atomically, availability/provenance is preserved, active sessions
   are recovered after restart, and bounded retention plus delete-all are
   implemented. See `docs/persistence.md`.
-- **Charts and estimates:** deferred until real captured data exists. Estimates
-  will be labeled and withheld when evidence is insufficient.
+- **Estimates:** deferred until real captured data exists. Estimates will be
+  labeled and withheld when evidence is insufficient.
 
 ## Privacy and permissions
 
@@ -264,7 +278,7 @@ Feature directories are added only when a milestone needs them.
 ## Versioning
 
 `pubspec.yaml` uses semantic-style `MAJOR.MINOR.PATCH+BUILD`. The project is
-pre-1.0 during development (`0.7.0+7` now). Build numbers increment for each
+pre-1.0 during development (`0.8.0+8` now). Build numbers increment for each
 distributed release candidate. The first signed preview tag is `v0.6.0`.
 Tag and release conventions are defined in `instructions.md` §17.
 
@@ -290,11 +304,10 @@ Tag and release conventions are defined in `instructions.md` §17.
   labels are implemented. Manual TalkBack/screen-reader validation and
   physical-device testing remain pending.
 - The app is dark-only by design; no light theme is included.
-- Live session tracking and the history list are implemented and tested. Session
-  detail, trend charts, alerts and health/capacity estimates remain pending
-  (Phase 3+).
-- The last published APK is `v0.6.0`; it predates live session history. The
-  current development version `0.7.0+7` has not been published.
+- Session detail and stored-sample trend charts are implemented. Alerts,
+  health/capacity estimates and other Phase 4 features remain pending.
+- The last published APK is `v0.6.0`; it predates live session tracking, history
+  and charts. The current development version `0.8.0+8` has not been published.
 - Average current, charge counter and other metrics are unsupported on some
   devices. The contract reports availability per metric; this is not a bug.
 - Release signing is configured with a dedicated Voltly key stored outside

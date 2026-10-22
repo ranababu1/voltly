@@ -6,6 +6,7 @@ import 'package:voltly/app/theme/app_tokens.dart';
 import 'package:voltly/core/sessions/charging_session.dart';
 import 'package:voltly/core/sessions/session_presentation.dart';
 import 'package:voltly/core/sessions/session_providers.dart';
+import 'package:voltly/features/sessions/session_detail_screen.dart';
 
 /// Local charging-session history.
 ///
@@ -169,7 +170,19 @@ class _SessionList extends StatelessWidget {
         for (final ChargingSession session in sessions)
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: _SessionCard(session: session),
+            child: _SessionCard(
+              session: session,
+              onTap: session.id == null
+                  ? null
+                  : () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (BuildContext context) =>
+                              SessionDetailScreen(sessionId: session.id!),
+                        ),
+                      );
+                    },
+            ),
           ),
       ],
     );
@@ -214,9 +227,10 @@ class _EmptyHistory extends StatelessWidget {
 }
 
 class _SessionCard extends StatelessWidget {
-  const _SessionCard({required this.session});
+  const _SessionCard({required this.session, this.onTap});
 
   final ChargingSession session;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -235,112 +249,119 @@ class _SessionCard extends StatelessWidget {
 
     return Semantics(
       container: true,
+      button: onTap != null,
+      onTap: onTap,
       label: sessionSemantics(session),
-      child: ExcludeSemantics(
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Icon(
-                        active
-                            ? Icons.battery_charging_full_rounded
-                            : Icons.battery_std_rounded,
-                        color: stateColor,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Wrap(
-                            spacing: AppSpacing.xs,
-                            runSpacing: AppSpacing.xxs,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: <Widget>[
-                              Text(
-                                sessionStateLabel(session),
-                                style: textTheme.titleMedium,
-                              ),
-                              _StatusPill(
-                                label: active ? 'Live' : 'Stored',
-                                color: active
-                                    ? AppColors.mint
-                                    : AppColors.textSecondary,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            sessionEndLabel(session),
-                            style: textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  'Started ${formatSessionDateTime(session.startedAt)}',
-                  style: textTheme.bodySmall,
-                ),
-                if (session.endedAt != null)
-                  Text(
-                    'Ended ${formatSessionDateTime(session.endedAt!)}',
-                    style: textTheme.bodySmall,
-                  ),
-                const SizedBox(height: AppSpacing.sm),
-                Wrap(
-                  spacing: AppSpacing.lg,
-                  runSpacing: AppSpacing.sm,
-                  children: <Widget>[
-                    _SessionFact(
-                      label: 'Start',
-                      value: formatSessionLevel(session.startLevelPercent),
-                    ),
-                    _SessionFact(
-                      label: 'End',
-                      value: active
-                          ? 'In progress'
-                          : formatSessionLevel(session.endLevelPercent),
-                    ),
-                    _SessionFact(
-                      label: 'Change',
-                      value: formatSessionLevelChange(session),
-                    ),
-                    _SessionFact(
-                      label: 'Duration',
-                      value: session.duration == null
-                          ? 'In progress'
-                          : formatSessionDuration(session.duration!),
-                    ),
-                    _SessionFact(
-                      label: 'Samples',
-                      value: '${session.sampleCount}',
-                    ),
-                  ],
-                ),
-                if (coverage.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: AppSpacing.sm),
-                  Wrap(
-                    spacing: AppSpacing.xs,
-                    runSpacing: AppSpacing.xxs,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        child: ExcludeSemantics(
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      for (final String label in coverage)
-                        _StatusPill(label: label, color: AppColors.warning),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Icon(
+                          active
+                              ? Icons.battery_charging_full_rounded
+                              : Icons.battery_std_rounded,
+                          color: stateColor,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Wrap(
+                              spacing: AppSpacing.xs,
+                              runSpacing: AppSpacing.xxs,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: <Widget>[
+                                Text(
+                                  sessionStateLabel(session),
+                                  style: textTheme.titleMedium,
+                                ),
+                                _StatusPill(
+                                  label: active ? 'Live' : 'Stored',
+                                  color: active
+                                      ? AppColors.mint
+                                      : AppColors.textSecondary,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              sessionEndLabel(session),
+                              style: textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Started ${formatSessionDateTime(session.startedAt)}',
+                    style: textTheme.bodySmall,
+                  ),
+                  if (session.endedAt != null)
+                    Text(
+                      'Ended ${formatSessionDateTime(session.endedAt!)}',
+                      style: textTheme.bodySmall,
+                    ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Wrap(
+                    spacing: AppSpacing.lg,
+                    runSpacing: AppSpacing.sm,
+                    children: <Widget>[
+                      _SessionFact(
+                        label: 'Start',
+                        value: formatSessionLevel(session.startLevelPercent),
+                      ),
+                      _SessionFact(
+                        label: 'End',
+                        value: active
+                            ? 'In progress'
+                            : formatSessionLevel(session.endLevelPercent),
+                      ),
+                      _SessionFact(
+                        label: 'Change',
+                        value: formatSessionLevelChange(session),
+                      ),
+                      _SessionFact(
+                        label: 'Duration',
+                        value: session.duration == null
+                            ? 'In progress'
+                            : formatSessionDuration(session.duration!),
+                      ),
+                      _SessionFact(
+                        label: 'Samples',
+                        value: '${session.sampleCount}',
+                      ),
+                    ],
+                  ),
+                  if (coverage.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: AppSpacing.sm),
+                    Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: AppSpacing.xxs,
+                      children: <Widget>[
+                        for (final String label in coverage)
+                          _StatusPill(label: label, color: AppColors.warning),
+                      ],
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

@@ -2,6 +2,64 @@
 
 Newest-first record of meaningful implementation changes.
 
+## 2026-10-22 — Phase 3 complete: session detail and stored trend charts
+
+**Milestone:** Phase 3 — Charging Sessions (implementation complete)
+
+**Summary**
+
+- Added a session-detail route from each history card, with loading, not-found,
+  empty-sample and storage-error states.
+- Added `sessionDetailProvider` to load one stored session and its retained
+  samples through the repository.
+- Added stored summary fields (state, dates, start/end levels, change, duration,
+  sample count) without fabricating unavailable values.
+- Added level, current, temperature and calculated battery-side power charts
+  drawn from retained samples only.
+- Added pure gap segmentation: missing values and intervals over five minutes
+  break the line; values are never interpolated. Pruned history is labelled and
+  charts cover only retained samples.
+- Added chart summaries and screen-reader labels describing sample count, latest
+  value, range, breaks and unavailable samples.
+- Added 6 chart-data tests, 7 detail-screen tests, a history-to-detail navigation
+  test and a detail-provider test, bringing Dart coverage to 111 tests.
+- Bumped the development version to `0.8.0+8`.
+
+**Key files**
+
+- `lib/core/sessions/session_detail.dart`
+- `lib/core/sessions/session_chart_data.dart`
+- `lib/core/sessions/session_providers.dart`
+- `lib/features/sessions/session_detail_screen.dart`
+- `lib/features/sessions/session_trend_chart.dart`
+- `test/core/sessions/session_chart_data_test.dart`
+- `test/features/sessions/session_detail_screen_test.dart`
+
+**Verification**
+
+- `dart format lib test` — clean.
+- `flutter analyze` — no issues.
+- `flutter test` — 111/111 passed.
+- `.\gradlew.bat :app:testDebugUnitTest --rerun-tasks` — 13/13 Kotlin tests
+  passed; native code unchanged.
+- `flutter build apk --debug` and `--release` — succeeded at `0.8.0+8`;
+  universal release 51.5 MB, production-signed.
+- `flutter build apk --release --split-per-abi --target-platform android-arm64`
+  — succeeded; arm64 release 17.8 MB, production-signed.
+- Universal `0.8.0` installed on the Pixel 10a AVD. The stored active session
+  opened in Session detail and exposed a gap-aware battery trend summary
+  (3 samples, 2 sampling breaks). arm64 was signature/ABI-checked but cannot
+  install on the x86_64 emulator.
+
+**Known limitations**
+
+- Physical-device telemetry and manual TalkBack validation remain pending.
+- Alerts, settings, health/capacity estimates and time-to-full/empty estimates
+  are not implemented.
+- The published GitHub Release `v0.6.0` predates session history and charts;
+  `0.8.0+8` is not published.
+- No AAB is built.
+
 ## 2026-10-22 — Phase 3 (in progress): live session persistence and history
 
 **Milestone:** Phase 3 — Charging Sessions

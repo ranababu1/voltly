@@ -25,6 +25,8 @@ abstract interface class SessionStore {
 
   Future<ChargingSession?> recoverActiveSession();
 
+  Future<ChargingSession?> sessionById(int id);
+
   Future<List<ChargingSession>> recentSessions({int limit});
 
   Future<List<TelemetrySample>> samplesForSession(int sessionId);

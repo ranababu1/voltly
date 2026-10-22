@@ -133,6 +133,7 @@ class SessionRepository implements SessionStore {
     });
   }
 
+  @override
   Future<ChargingSession?> sessionById(int id) async {
     final ChargingSessionRow? row = await (database.select(
       database.chargingSessions,

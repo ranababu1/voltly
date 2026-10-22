@@ -6,9 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:voltly/app/theme/app_theme.dart';
+import 'package:voltly/core/persistence/persistence_providers.dart';
 import 'package:voltly/core/sessions/charging_session.dart';
 import 'package:voltly/core/sessions/session_providers.dart';
 import 'package:voltly/features/sessions/session_history_screen.dart';
+
+import '../../support/fake_session_store.dart';
 
 void main() {
   final DateTime t0 = DateTime.utc(2026, 10, 20, 10);
@@ -176,5 +179,31 @@ void main() {
     expect(node.label, contains('End level 70%.'));
     expect(node.label, contains('25 samples.'));
     handle.dispose();
+  });
+
+  testWidgets('opens a session detail from a history card', (
+    WidgetTester tester,
+  ) async {
+    final FakeSessionStore store = FakeSessionStore();
+    store.sessions[2] = completedSession();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [sessionRepositoryProvider.overrideWithValue(store)],
+        child: MaterialApp(
+          theme: AppTheme.dark,
+          home: const SessionHistoryScreen(),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Completed'), findsOneWidget);
+
+    await tester.tap(find.text('Completed'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('Session detail'), findsOneWidget);
+    expect(find.text('Stored trends'), findsOneWidget);
   });
 }

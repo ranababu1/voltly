@@ -83,6 +83,12 @@ class FakeSessionStore implements SessionStore {
   }
 
   @override
+  Future<ChargingSession?> sessionById(int id) async {
+    _maybeFail('session');
+    return sessions[id];
+  }
+
+  @override
   Future<List<ChargingSession>> recentSessions({int limit = 20}) async {
     _maybeFail('history');
     final List<ChargingSession> ordered = sessions.values.toList()

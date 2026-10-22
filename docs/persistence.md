@@ -1,7 +1,7 @@
 # Local Persistence
 
-**Status:** schema v1, repository and live session tracking are implemented. The
-session history list is implemented; detail/charts are pending.
+**Status:** schema v1, repository, live session tracking, history, detail and
+gap-aware stored trend charts are implemented.
 
 Voltly uses Drift on top of SQLite (`package:sqlite3` native assets). The
 database is local-only and is never committed to source control. The production
@@ -104,6 +104,17 @@ returns the number of sessions deleted.
 - The history screen reads recent sessions from the same repository. It labels
   active, completed and interrupted sessions, sampling gaps, partial sessions
   and retention-pruned sample lists.
+
+## Chart rules
+
+Session detail charts are built only from retained database samples:
+
+- A missing or unavailable metric breaks the line.
+- A gap longer than five minutes breaks the line.
+- No value is interpolated between samples.
+- Retention-pruned history is labelled; a chart covers only the retained range.
+- Charts expose a text summary and screen-reader label instead of relying on
+  visual shape alone.
 
 ## Privacy
 

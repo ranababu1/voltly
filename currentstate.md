@@ -1,8 +1,8 @@
 # Current State
 
 **Last updated:** 2026-10-22
-**Milestone:** Phase 3 — Charging Sessions (in progress; live persistence and history list complete, detail/charts pending)
-**Project version:** `0.7.0+7` (versionCode 7)
+**Milestone:** Phase 3 — Charging Sessions (implementation complete; physical-device validation pending)
+**Project version:** `0.8.0+8` (versionCode 8)
 
 ## Release
 
@@ -15,7 +15,7 @@
 - Marked pre-release because the session history UI and physical-device
   validation were still pending at publication; `v0.6.0` predates live session
   tracking and history.
-- The current development build is `0.7.0+7`; it is not published.
+- The current development build is `0.8.0+8`; it is not published.
 - Both uploaded assets were downloaded again and their SHA-256 hashes matched
   the local signed builds.
 - A tag-triggered release workflow (`.github/workflows/release.yml`) is added for
@@ -41,7 +41,9 @@
 | Charging-session domain | Normalized session/sample models with nullable levels, provenance, sample count and gap/coverage metadata | 2 sample-mapping tests; `flutter analyze` |
 | Session state machine | Charging starts, full/discharging completes, `not_charging` grace, interrupted/partial states, duplicate and restart handling | 14 tracker tests |
 | Live session coordinator | App-scoped DB/repository; serialized snapshots; persisted start/sample/end; restart recovery; failure pause/retry | 6 coordinator + 4 provider tests |
-| Session history UI | Dashboard entry; active/completed/interrupted, gap, partial and pruned labels; 2× text; semantics | 6 history UI tests; emulator active session |
+| Session history UI | Dashboard entry; active/completed/interrupted, gap, partial and pruned labels; 2× text; semantics | 7 history UI tests; emulator active session |
+| Session detail | Stored summary by id, loading/not-found/error, navigation from history | 7 detail tests; emulator detail screen |
+| Stored trend charts | Level/current/temperature/power from retained samples; gap/unavailable breaks; no interpolation; chart semantics | 6 chart-data tests; 2× text; emulator semantics |
 | Local persistence | Drift schema v1, indexes, foreign keys, nullable values, availability/provenance metadata | 13 persistence tests; schema inspection |
 | Transactional repository | Atomic session/sample writes, duplicate handling, restart recovery, duplicate-active reconciliation, delete-all | Repository tests |
 | Retention | 100 ended sessions, 180 days, 720 samples/session; active sessions retained; pruning flagged honestly | Retention/cap tests |
@@ -56,13 +58,13 @@
 | Riverpod state | `TelemetryController` owns one app-scoped subscription; explicit retry | Dashboard, diagnostics, lifecycle and history tests |
 | Diagnostics UI | Live values, availability/reason, provenance, timestamps, stale/error/loading states | Widget tests + emulator UI hierarchy |
 | End-to-end telemetry | Dashboard matched `dumpsys`; live simulated update to 42%/Charging/AC; session persisted and shown in history | Pixel 10a AVD, Android 17 |
-| Automated tests | 96 Dart + 13 Kotlin | `flutter test` 96/96; Gradle 13/13 |
-| Android builds | Debug/release at 0.7.0; universal 51.2 MB, arm64 17.8 MB; production-signed SQLite bundles | Builds; `apksigner`; APK metadata; emulator |
+| Automated tests | 111 Dart + 13 Kotlin | `flutter test` 111/111; Gradle 13/13 |
+| Android builds | Debug/release at 0.8.0; universal 51.5 MB, arm64 17.8 MB; production-signed SQLite bundles | Builds; `apksigner`; APK metadata; emulator |
 
-**Deliberately absent:** session detail screens, trend charts, alerts,
-health/capacity estimates and a light theme. The dashboard shows only real
-device telemetry, explicit unavailable states and calculated power labeled as
-approximate. Session tracking and history now run against the local database.
+**Deliberately absent:** alerts, health/capacity estimates and a light theme.
+Phase 4 estimate/alert work remains. The dashboard and session screens show only
+real telemetry and stored samples, explicit unavailable states, and calculated
+battery-side power labeled as approximate.
 
 ## Architecture and data flow
 
@@ -82,7 +84,7 @@ TelemetrySnapshot → DashboardScreen + TelemetryDiagnosticsScreen
         ↓
 SessionCoordinator → ChargingSessionTracker → SessionRepository
         ↓
-Drift/SQLite → SessionHistoryScreen
+Drift/SQLite → SessionHistoryScreen → SessionDetailScreen + trend charts
 ```
 
 - `lib/main.dart` sets the system UI overlay and runs `VoltlyApp` in a
@@ -112,7 +114,14 @@ Drift/SQLite → SessionHistoryScreen
   retry is explicit.
 - `lib/features/sessions/session_history_screen.dart` lists recent sessions and
   labels active/completed/interrupted, gaps, partial sessions and pruned sample
-  lists. The dashboard links to it and shows a storage-error banner with Retry.
+  lists. Tapping a card opens stored session detail. The dashboard links to the
+  list and shows a storage-error banner with Retry.
+- `lib/features/sessions/session_detail_screen.dart` loads one session and its
+  retained samples through `sessionDetailProvider`. It exposes loading,
+  not-found and error states plus level/current/temperature/power trend cards.
+- `lib/core/sessions/session_chart_data.dart` splits stored points at missing
+  values and gaps over five minutes; `session_trend_chart.dart` draws only those
+  segments and never interpolates.
   explicit.
 - `lib/features/dashboard/dashboard_screen.dart` consumes the controller and
   renders the live primary/secondary metrics. It does not query channels or
@@ -154,16 +163,15 @@ flutter build apk --release
 flutter build apk --release --split-per-abi
 ```
 
-Last known results: format clean, analyze clean, 96/96 Dart tests passed,
+Last known results: format clean, analyze clean, 111/111 Dart tests passed,
 13/13 Kotlin tests passed, signed debug/release builds succeeded at version
-0.7.0. Universal release is 51.2 MB; arm64 is 17.8 MB; both are production-signed,
+0.8.0. Universal release is 51.5 MB; arm64 is 17.8 MB; both are production-signed,
 bundle SQLite and have no `INTERNET` permission. On the Pixel 10a AVD
-(Android 17), simulated `level 42`, `status 2`, `ac 1` produced live dashboard
-values and a real `Recording` session in Charging sessions (start 42%, one
-sample). The dashboard also matched `dumpsys battery` earlier at 100%,
-"Not charging", 5.00 V, 25.0 °C, 10.0 mAh and 4.50 W calculated.
-`--split-per-abi --target-platform android-arm64` produced the arm64 artifact;
-the arm64 APK cannot install on this x86_64 emulator.
+(Android 17), simulated charging produced live dashboard values, a stored active
+session and a session-detail screen with gap-aware battery trend semantics
+(3 stored samples, 2 sampling breaks). The dashboard also matched
+`dumpsys battery` earlier at 100%, "Not charging", 5.00 V, 25.0 °C, 10.0 mAh and
+4.50 W calculated. The arm64 APK cannot install on this x86_64 emulator.
 
 ## Known issues and limitations
 
@@ -177,11 +185,12 @@ the arm64 APK cannot install on this x86_64 emulator.
   labels are implemented and automated-tested. Manual TalkBack validation on a
   physical device remains pending.
 - The dashboard is dark-only by design; no light theme is included.
-- Live session tracking and history are implemented and automated-tested.
-  Session detail screens, trend charts, alerts and estimates are not implemented
-  yet (Phase 3+). No v2 migration exists; the newer-schema guard is tested.
-- The last published GitHub Release `v0.6.0` predates live session tracking and
-  history. The current `0.7.0+7` development build is not published.
+- Live session tracking, history, detail and stored trend charts are implemented
+  and automated-tested. Alerts, health/capacity estimates and other Phase 4
+  features are not implemented. No v2 migration exists; the newer-schema guard
+  is tested.
+- The last published GitHub Release `v0.6.0` predates live session tracking,
+  history and charts. The current `0.8.0+8` development build is not published.
 - `currentAverage` and `chargeCounter` are unsupported on many devices; the
   contract reports this explicitly and no fallback estimate is invented.
 - Riverpod automatic retry is disabled for telemetry. A failed native channel
@@ -238,28 +247,29 @@ the arm64 APK cannot install on this x86_64 emulator.
 
 ## Next task
 
-**Phase 3 (increment 3) — session detail and trend charts.**
+**Phase 4 (increment 1) — evidence-based time-to-full/empty estimates.**
 
-Prerequisite complete: live session coordinator, app-scoped persistence and
-history list (96 Dart tests).
+Prerequisite complete: Phase 3 session tracking, history, detail and stored trend
+charts (111 Dart tests). Physical-device validation remains outstanding.
 
 Acceptance criteria:
 
-1. Tapping a history card opens a detail screen by session id and loads the
-   session plus its stored samples through the repository. Loading, not-found,
-   empty-sample and storage-error states must be explicit.
-2. Show summary fields (state, start/end levels, duration, sample count,
-   coverage/pruning) without substituting values for unavailable readings.
-3. Add a level-over-time chart plus current/temperature/power trends only from
-   stored samples. Do not interpolate across sampling gaps, interrupted periods
-   or pruned ranges; mark gaps explicitly and label history as non-continuous.
-4. Charts must expose concise semantics and remain readable at 320×640 with 2×
-   text. Respect reduced motion if any animation is added.
-5. Add repository/detail/chart tests covering normal, interrupted, gap-affected,
-   pruned and unavailable data.
-6. Run build_runner, format, analyze, Dart/Kotlin tests, debug/release builds;
-   update documentation and push.
+1. Implement a pure estimator using only retained telemetry samples and a
+   documented minimum observation window. Require an available charging state,
+   sufficient elapsed coverage and a consistent level direction.
+2. Return an explicit unavailable reason when samples are insufficient, stale,
+   gap-affected, pruned across the estimation window or contradictory. Never
+   substitute zero, charger power, capacity or battery health.
+3. Show any time-to-full/empty estimate as approximate and calculated, with its
+   coverage/assumptions visible; withhold it automatically when evidence is
+   inadequate.
+4. Add tests for valid charging/discharging cases, too-short windows, gaps,
+   unavailable state/level, pruning and noisy levels.
+5. Keep the estimate accessible at 320×640 with 2× text and expose a concise
+   screen-reader label.
+6. Add repository/detail chart tests as needed; run build_runner, format,
+   analyze, Dart/Kotlin tests, debug/release builds; update documentation and
+   push.
 
 Physical-device telemetry and manual screen-reader validation remain
-outstanding. Session detail must not imply continuous sampling or charger-side
-power.
+outstanding. Alerts, settings and battery-health estimates are later increments.

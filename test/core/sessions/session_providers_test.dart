@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:voltly/core/persistence/persistence_providers.dart';
 import 'package:voltly/core/sessions/charging_session.dart';
+import 'package:voltly/core/sessions/session_detail.dart';
 import 'package:voltly/core/sessions/session_providers.dart';
+import 'package:voltly/core/sessions/telemetry_sample.dart';
 import 'package:voltly/core/telemetry/telemetry_providers.dart';
 
 import '../../support/fake_battery_telemetry_service.dart';
@@ -136,5 +138,32 @@ void main() {
       sessionHistoryProvider.future,
     );
     expect(second.single.sampleCount, 2);
+  });
+
+  test('loads one session with its retained samples for detail', () async {
+    store.sessions[7] = ChargingSession(
+      id: 7,
+      startedAt: t0,
+      endedAt: t0.add(const Duration(minutes: 2)),
+      lastObservedAt: t0.add(const Duration(minutes: 2)),
+      startLevelPercent: 40,
+      endLevelPercent: 45,
+      state: ChargingSessionState.completed,
+      sampleCount: 2,
+    );
+    final TelemetrySample sample = TelemetrySample.fromSnapshot(
+      sessionSnapshot(at: t0, level: 40),
+    );
+    store.samples.add(sample.copyWith(sessionId: 7));
+
+    final SessionDetail? detail = await container.read(
+      sessionDetailProvider(7).future,
+    );
+    expect(detail, isNotNull);
+    expect(detail!.session.id, 7);
+    expect(detail.samples, hasLength(1));
+    expect(detail.samples.single.sessionId, 7);
+
+    expect(await container.read(sessionDetailProvider(999).future), isNull);
   });
 }
