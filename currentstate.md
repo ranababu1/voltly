@@ -229,6 +229,9 @@ the arm64 APK cannot install on this x86_64 emulator.
   workflow is active and will handle future `v*` tags.
 - GitHub Release `v0.6.0` is a pre-release with both signed APK assets. Both
   assets were downloaded again and their SHA-256 hashes matched.
+- Live-session/history commit `3dc56db` was pushed on 2026-10-22; the remote
+  `refs/heads/main` resolved to the same commit, and the working tree was clean
+  before this documentation update.
 - Verify the current tip with `git status -sb` and
   `git ls-remote --heads origin main`.
 - `plan.md` and `instructions.md` are preserved at the root unchanged.
