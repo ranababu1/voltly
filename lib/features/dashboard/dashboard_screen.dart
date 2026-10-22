@@ -10,6 +10,7 @@ import 'package:voltly/core/sessions/session_providers.dart';
 import 'package:voltly/core/telemetry/battery_power.dart';
 import 'package:voltly/core/telemetry/telemetry_models.dart';
 import 'package:voltly/core/telemetry/telemetry_providers.dart';
+import 'package:voltly/features/charging_screen/charging_screen_settings_card.dart';
 import 'package:voltly/features/dashboard/telemetry_diagnostics_screen.dart';
 import 'package:voltly/features/dashboard/telemetry_presentation.dart';
 import 'package:voltly/features/sessions/session_estimate_card.dart';
@@ -123,6 +124,8 @@ class DashboardScreen extends ConsumerWidget {
                                         .retry(),
                                   ),
                             ),
+                            const SizedBox(height: AppSpacing.md),
+                            const ChargingScreenSettingsCard(),
                           ],
                         ),
                         const Padding(

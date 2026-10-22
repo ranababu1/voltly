@@ -1,6 +1,6 @@
 # Current State
 
-**Last updated:** 2026-10-22
+**Last updated:** 2026-10-23
 **Milestone:** Phase 4 — Estimates (increment 1 complete; physical-device validation pending)
 **Project version:** `0.9.0+9` (versionCode 9)
 
@@ -60,6 +60,7 @@
 | Stored trend charts | Level/current/temperature/power from retained samples; gap/unavailable breaks; no interpolation; chart semantics | 6 chart-data tests; 2× text; emulator semantics |
 | Time-to-full/empty estimator | Pure 10–30-minute retained window; fresh/consecutive samples required; consistent state and direction; 24-hour cap; one-shot stale invalidation; no capacity/health/charger substitution | 16 estimator tests; 2 estimate provider cases |
 | Estimate UI | Active-session card; approximate label, coverage, assumptions, pruning/gap notes; explicit unavailable reason; semantics; 2× text | 6 estimate-card tests; emulator withheld state |
+| Lock-screen charging screen | Opt-in; FGS + full-screen intent on charger connect while locked; clock, tick ring, temp/current/estimate/power; closes on unplug | 17 Dart + 6 Kotlin tests; AVD lock-screen launch and unplug dismissal |
 | Local persistence | Drift schema v1, indexes, foreign keys, nullable values, availability/provenance metadata | 13 persistence tests; schema inspection |
 | Transactional repository | Atomic session/sample writes, duplicate handling, restart recovery, duplicate-active reconciliation, delete-all | Repository tests |
 | Retention | 100 ended sessions, 180 days, 720 samples/session; active sessions retained; pruning flagged honestly | Retention/cap tests |
@@ -74,9 +75,12 @@
 | Riverpod state | `TelemetryController` owns one app-scoped subscription; explicit retry | Dashboard, diagnostics, lifecycle and history tests |
 | Diagnostics UI | Live values, availability/reason, provenance, timestamps, stale/error/loading states | Widget tests + emulator UI hierarchy |
 | End-to-end telemetry | Dashboard matched `dumpsys`; live simulated update to 42%/Charging/AC; session persisted and shown in history | Pixel 10a AVD, Android 17 |
-| Automated tests | 135 Dart + 13 Kotlin | `flutter test` 135/135; Gradle 13/13 |
+| Automated tests | 152 Dart + 19 Kotlin | `flutter test` 152/152; Gradle 19/19 |
 | Android builds | Debug/release at 0.9.0; universal 51.5 MB, arm64 17.8 MB; production-signed SQLite bundles | Builds; `apksigner`; APK metadata; emulator |
 | AAB | Production-signed 51.1 MB Google Play bundle, published with the preview release; not uploaded to a store | `flutter build appbundle --release`; `jarsigner`; SHA-256 |
+
+**Opt-in background work:** the charging screen (`docs/charging-screen.md`)
+is the only background component; it runs only while the user has it on.
 
 **Deliberately absent:** alerts, settings, health/capacity estimates and a light
 theme. Phase 4 time estimates are implemented; capacity/health, alerts and
@@ -212,6 +216,11 @@ is still pending. The dashboard also matched `dumpsys battery` earlier at 100%,
 cannot install on this x86_64 emulator.
 
 ## Known issues and limitations
+
+- Charging screen: metrics refresh only on battery broadcasts; return to a
+  secure keyguard and OEM behaviour are unverified (AVD lock is None). Play
+  submission needs `specialUse` FGS and full-screen-intent declarations.
+- The `v0.9.0-preview` release predates the charging screen.
 
 - Physical-device telemetry validation is still pending. Emulator values prove
   the channel, parsing and UI pipeline, not hardware-specific sign, units or

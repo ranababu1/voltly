@@ -2,6 +2,38 @@
 
 Newest-first record of meaningful implementation changes.
 
+## 2026-10-23 — Lock-screen charging screen
+
+**Milestone:** Owner-approved addition outside `plan.md` (see
+`docs/charging-screen.md`)
+
+**Summary**
+
+- Added an opt-in charging screen shown over the lock screen when a charger is
+  connected: clock, date, animated tick ring, temperature, current, estimate
+  and approximate battery-side power.
+- Native: `ChargingMonitorService` (`specialUse` foreground service, connect
+  receiver only), `ChargingScreenPolicy` (locked/screen-off + 5 s debounce),
+  full-screen-intent launch, `ChargingBootReceiver`, and the
+  `com.voltly/charging_screen` channel (`showWhenLocked`, keyguard dismissal,
+  notification permission, full-screen special access).
+- New permissions: `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`,
+  `POST_NOTIFICATIONS`, `USE_FULL_SCREEN_INTENT`, `RECEIVE_BOOT_COMPLETED`.
+- Dart: `ChargingScreenService` + providers, `ChargingScreen`,
+  `ChargingRing`, pure tile formatters, and a dashboard opt-in card with
+  Preview, permission-denied and full-screen-blocked states.
+
+**Verification**
+
+- `flutter analyze` clean; `flutter test` 152/152 (17 new); Gradle unit tests
+  19/19 (6 new policy tests); `flutter build apk --debug` succeeded.
+- Pixel 10a AVD (Android 17): enabling the switch started the foreground
+  service (`types=0x40000000`); locking the device and simulating AC connect
+  woke the screen and showed the charging screen over the keyguard; simulating
+  unplug closed it.
+- Not verified: return to a secure keyguard (the AVD lock is None), physical
+  devices, OEM battery-optimisation behaviour.
+
 ## 2026-10-22 — v0.9.0-preview published with AAB
 
 **Milestone:** Phase 4 — Estimates (increment 1 preview release)
