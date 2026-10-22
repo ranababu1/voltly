@@ -241,6 +241,9 @@ session and a session-detail screen with gap-aware battery trend semantics
 - Live-session/history commit `3dc56db` was pushed on 2026-10-22; the remote
   `refs/heads/main` resolved to the same commit, and the working tree was clean
   before this documentation update.
+- Session-detail/chart commit `bb2e7bc` was pushed on 2026-10-22; the remote
+  `refs/heads/main` resolved to the same commit, and the working tree was clean
+  before this documentation update.
 - Verify the current tip with `git status -sb` and
   `git ls-remote --heads origin main`.
 - `plan.md` and `instructions.md` are preserved at the root unchanged.
