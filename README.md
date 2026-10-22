@@ -88,6 +88,8 @@ cd android
 .\gradlew.bat :app:testDebugUnitTest
 cd ..
 flutter build apk --debug
+flutter build apk --release
+flutter build appbundle --release
 ```
 
 Last recorded results (2026-10-22, Phase 4 increment 1 estimates):
@@ -104,6 +106,10 @@ Last recorded results (2026-10-22, Phase 4 increment 1 estimates):
 - `flutter build apk --release` — succeeded (production-signed).
 - `flutter build apk --release --split-per-abi --target-platform android-arm64`
   — succeeded (production-signed).
+- `flutter build appbundle --release` — succeeded; `app-release.aab` is 51.1 MB
+  (53,570,612 bytes), production-signed with the Voltly certificate, SHA-256
+  `79D357D3A292FE0838F991145C512EDD1521FC4EB2150C5C4A1308DDEE10B4DA`. It is a
+  Google Play distribution artifact and is not directly installable.
 - Release APKs remain production-signed; no `INTERNET` permission.
 - Persistence tests cover schema/index creation, transaction rollback,
   unavailable-value mapping, duplicate samples, duplicate active recovery,
@@ -327,6 +333,8 @@ Tag and release conventions are defined in `instructions.md` §17.
   labels are implemented. Manual TalkBack/screen-reader validation and
   physical-device testing remain pending.
 - The app is dark-only by design; no light theme is included.
+- A signed AAB exists for a future Google Play submission, but it has not been
+  uploaded to a store. GitHub Releases still require the two APK assets.
 - Session detail, stored-sample trend charts and active-session time estimates
   are implemented. Alerts, health/capacity estimates and other Phase 4 features
   remain pending.

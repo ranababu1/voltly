@@ -68,6 +68,7 @@
 | End-to-end telemetry | Dashboard matched `dumpsys`; live simulated update to 42%/Charging/AC; session persisted and shown in history | Pixel 10a AVD, Android 17 |
 | Automated tests | 135 Dart + 13 Kotlin | `flutter test` 135/135; Gradle 13/13 |
 | Android builds | Debug/release at 0.9.0; universal 51.5 MB, arm64 17.8 MB; production-signed SQLite bundles | Builds; `apksigner`; APK metadata; emulator |
+| AAB | Production-signed 51.1 MB Google Play bundle; not uploaded to a store | `flutter build appbundle --release`; `jarsigner`; SHA-256 |
 
 **Deliberately absent:** alerts, settings, health/capacity estimates and a light
 theme. Phase 4 time estimates are implemented; capacity/health, alerts and
@@ -182,6 +183,7 @@ cd ..
 flutter build apk --debug
 flutter build apk --release
 flutter build apk --release --split-per-abi
+flutter build appbundle --release
 ```
 
 Last known results: format clean, analyze clean, 135/135 Dart tests passed,
@@ -230,8 +232,9 @@ observations and is covered by automated tests. The dashboard also matched
 - `v0.6.0` is published as a pre-release. Session history UI, estimates and
   physical-device telemetry/TalkBack validation remain pending, so it is not a
   stable release.
-- No AAB is configured or built. GitHub Releases currently use the two signed
-  APKs required by `instructions.md` §17.1.
+- A signed AAB (`app-release.aab`, 51.1 MB) exists for a future Google Play
+  submission, but it has not been uploaded to a store. GitHub Releases still
+  require the two signed APKs from `instructions.md` §17.1.
 - The arm64 APK was signature/ABI-checked but could not be installed on the
   x86_64 emulator used for the universal APK smoke test.
 - The Gradle build emits an SDK XML version warning (installed tooling is newer
@@ -301,6 +304,5 @@ screen-reader/2× text coverage. See `docs/estimates.md`. Automated verification
 Phase 4 increment 2 has not started. The plan order places battery
 health/capacity evidence before alerts and settings; any next increment must keep
 the same rule that missing evidence is explained, never invented. Outstanding
-release gates remain: physical-device telemetry validation, manual
-TalkBack/screen-reader validation, publication of `0.9.0+9` (if approved) and an
-AAB decision.
+release gates remain: physical-device telemetry validation and manual
+TalkBack/screen-reader validation.

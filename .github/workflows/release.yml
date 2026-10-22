@@ -1,12 +1,17 @@
 name: Release
 
 # Tag-triggered signed release:
-#   git tag -a v0.7.0 -m "Voltly v0.7.0"
-#   git push origin v0.7.0
+#   git tag -a v0.9.0-preview -m "Voltly v0.9.0 preview"
+#   git push origin v0.9.0-preview
 #
-# Publishes two APK assets:
-#   Voltly-v0.7.0-universal.apk
-#   Voltly-v0.7.0-arm64-v8a.apk
+# Publishes:
+#   Voltly-v0.9.0-preview-universal.apk
+#   Voltly-v0.9.0-preview-arm64-v8a.apk
+#   Voltly-v0.9.0-preview.aab (Google Play distribution; not installable)
+#
+# A tag exactly matching the pubspec version is a stable release. A tag with a
+# hyphenated suffix (for example -preview or -rc.1) is a pre-release. The AAB is
+# separate from the two required APK assets.
 #
 # Requires four repository secrets:
 #   ANDROID_KEYSTORE_BASE64
@@ -67,30 +72,56 @@ jobs:
           storeFile=upload-keystore.jks
           EOF
 
-      - name: Build, verify and stage signed APKs
+      - name: Build, verify and stage signed APKs and AAB
         run: |
           set -euo pipefail
           VERSION="$(sed -nE 's/^version: ([0-9]+\.[0-9]+\.[0-9]+)\+([0-9]+).*$/\1/p' pubspec.yaml)"
           test -n "$VERSION" || { echo 'Could not read version from pubspec.yaml' >&2; exit 1; }
-          test "v$VERSION" = "$GITHUB_REF_NAME" || {
-            echo "Tag $GITHUB_REF_NAME does not match pubspec version v$VERSION" >&2
-            exit 1
-          }
+
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          case "$TAG_VERSION" in
+            "$VERSION"|"$VERSION"-*) ;;
+            *)
+              echo "Tag $GITHUB_REF_NAME does not match pubspec version $VERSION or a -preview suffix" >&2
+              exit 1
+              ;;
+          esac
+          RELEASE_VERSION="$TAG_VERSION"
 
           flutter build apk --release
           flutter build apk --release --split-per-abi --target-platform android-arm64
+          flutter build appbundle --release
 
           mkdir -p release-assets
           cp build/app/outputs/flutter-apk/app-release.apk \
-            "release-assets/Voltly-v${VERSION}-universal.apk"
+            "release-assets/Voltly-v${RELEASE_VERSION}-universal.apk"
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
-            "release-assets/Voltly-v${VERSION}-arm64-v8a.apk"
+            "release-assets/Voltly-v${RELEASE_VERSION}-arm64-v8a.apk"
+          cp build/app/outputs/bundle/release/app-release.aab \
+            "release-assets/Voltly-v${RELEASE_VERSION}.aab"
 
           cat > release-assets/download-guide.md <<EOF
           ### Which file should I download?
 
-          - \`Voltly-v${VERSION}-arm64-v8a.apk\` — most modern phones (2018+), smallest
-          - \`Voltly-v${VERSION}-universal.apk\` — any compatible Android 8.0+ device
+          - \`Voltly-v${RELEASE_VERSION}-arm64-v8a.apk\` — most modern phones (2018+), smallest
+          - \`Voltly-v${RELEASE_VERSION}-universal.apk\` — any compatible Android 8.0+ device
+          - \`Voltly-v${RELEASE_VERSION}.aab\` — Google Play distribution only; not directly installable
+
+          ### Release status
+
+          This release is a preview: physical-device telemetry validation and manual
+          TalkBack validation remain outstanding. The Android APKs are signed with the
+          Voltly production key. The AAB is a separate Google Play artifact and does not
+          replace either APK.
+
+          ### Known limitations
+
+          - Telemetry and UI behavior are validated on an Android emulator only; vendor
+            hardware behavior remains unverified.
+          - Time estimates cover active sessions only, use a fresh contiguous sample
+            window, and are withheld when evidence is insufficient.
+          - No AAB has been uploaded to Google Play by this workflow; it is an artifact
+            for a separate store submission.
           EOF
 
           APKSIGNER="$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools" -type f -name apksigner | sort -V | tail -n1)"
@@ -103,14 +134,24 @@ jobs:
             fi
           done
 
+          AAB="release-assets/Voltly-v${RELEASE_VERSION}.aab"
+          test -f "$AAB" || { echo 'AAB was not staged' >&2; exit 1; }
+          jarsigner -verify "$AAB"
+          jarsigner -verify "$AAB" | grep -q 'jar verified' || {
+            echo "$AAB is not signed correctly" >&2
+            exit 1
+          }
+
           ls -l release-assets
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> "$GITHUB_ENV"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
-          files: release-assets/*.apk
+          files: |
+            release-assets/*.apk
+            release-assets/*.aab
           body_path: release-assets/download-guide.md
           append_body: true

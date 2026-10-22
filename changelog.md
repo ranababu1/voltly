@@ -31,6 +31,7 @@ Newest-first record of meaningful implementation changes.
   pruning, the 24-hour cap, semantics and 2× text.
 - Added `docs/estimates.md` documenting the evidence rules, formula, unavailable
   reasons, pruning/gap semantics and limits.
+- Built and verified a production-signed AAB for a future Google Play submission.
 - Bumped the development version to `0.9.0+9`.
 
 **Key files**
@@ -56,6 +57,10 @@ Newest-first record of meaningful implementation changes.
   production-signed.
 - `flutter build apk --release --split-per-abi --target-platform android-arm64`
   — succeeded; arm64 17.8 MB, production-signed.
+- `flutter build appbundle --release` — succeeded; AAB 51.1 MB
+  (53,570,612 bytes), production-signed, SHA-256
+  `79D357D3A292FE0838F991145C512EDD1521FC4EB2150C5C4A1308DDEE10B4DA`.
+  The AAB is a Google Play artifact and does not replace the APK assets.
 - Universal `0.9.0` installed on the Pixel 10a AVD. The active session showed the
   estimate card withheld with "at least 3 stored samples are needed; 2
   available" and semantics "Battery time estimate unavailable." A calculated
@@ -72,7 +77,8 @@ Newest-first record of meaningful implementation changes.
   an estimate.
 - Alerts, settings and health/capacity estimates are not implemented.
 - The published GitHub Release `v0.6.0` predates sessions, history, charts and
-  estimates; `0.9.0+9` is not published. No AAB is built.
+  estimates; `0.9.0+9` is not published. A signed AAB has been built but not
+  uploaded to Google Play.
 
 ## 2026-10-22 — Phase 3 complete: session detail and stored trend charts
 

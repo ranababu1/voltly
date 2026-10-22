@@ -3,11 +3,15 @@
 ## Versioning
 
 - `pubspec.yaml` uses `MAJOR.MINOR.PATCH+BUILD`.
-- Tags use `vMAJOR.MINOR.PATCH`, for example `v0.6.0`.
-- APK assets include the app and version:
-  - `Voltly-v0.6.0-universal.apk`
-  - `Voltly-v0.6.0-arm64-v8a.apk`
-- The tag, `versionName`, and asset version must match.
+- Stable tags use `vMAJOR.MINOR.PATCH`, for example `v0.6.0`.
+- Preview tags use a hyphenated suffix, for example `v0.9.0-preview` or
+  `v0.9.0-rc.1`; these are published as GitHub pre-releases.
+- Asset filenames use the release tag version:
+  - `Voltly-v0.9.0-preview-universal.apk`
+  - `Voltly-v0.9.0-preview-arm64-v8a.apk`
+  - `Voltly-v0.9.0-preview.aab` (Google Play artifact, not installable)
+- The tag, `versionName` and asset version must match, allowing the documented
+  preview suffix. The AAB does not replace either required APK.
 
 ## Signing
 
@@ -24,7 +28,7 @@ Never commit the keystore, `key.properties`, passwords, or base64 copies. Back
 up the keystore and credentials; losing them prevents installing updates over an
 existing installation signed with the same key.
 
-Public certificate fingerprint for `v0.6.0`:
+Public certificate fingerprint:
 
 ```text
 SHA-256 54:3D:C7:A8:C3:D4:E3:3D:63:E8:18:0F:09:1F:2A:BD:07:9D:10:2D:3E:32:E8:71:50:38:8F:04:FE:34:D6:41
@@ -49,8 +53,11 @@ SHA-256 54:3D:C7:A8:C3:D4:E3:3D:63:E8:18:0F:09:1F:2A:BD:07:9D:10:2D:3E:32:E8:71:
 
 `.github/workflows/release.yml` runs on `v*` tags. It builds and tests the
 project, materializes the signing material from the four repository secrets,
-builds both APKs, verifies that they are not debug-signed, and publishes the
-GitHub Release. Tags containing a hyphen are marked as pre-releases.
+builds both APKs and the AAB, verifies the APK and AAB signatures, and publishes
+the GitHub Release. A tag exactly matching the pubspec version is a stable
+release; tags containing a hyphen are marked as pre-releases. The AAB is
+uploaded as a separate Google Play artifact and is not presented as an
+installable APK.
 
 `v0.6.0` was published manually before the workflow was added; its signed assets
 were verified by downloading them again.
