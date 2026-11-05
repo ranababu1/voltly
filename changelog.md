@@ -2,6 +2,33 @@
 
 Newest-first record of meaningful implementation changes.
 
+## 2026-11-05 — Live current meter and dashboard redesign (0.11.0+11)
+
+**Summary**
+
+- Native adapter now re-reads battery properties once per second while Dart is
+  listening (foreground only), in addition to `ACTION_BATTERY_CHANGED`. Before,
+  current only changed when Android happened to broadcast, so the mA reading
+  looked frozen. This supersedes the earlier "no polling" decision at the
+  owner's request.
+- Added `CurrentCalibration`: learns and persists whether the device reports
+  current in mA instead of µA and whether its sign is inverted.
+- Added `health`, `technology` and `cycleCount` (additive schema-1 keys).
+- Session tracker stores at most one sample per 30 s unless the charging state
+  changes; the tracking controller skips no-op updates so history is not
+  reloaded every second.
+- New in-memory `liveCurrentProvider`: 60 s trace plus min/avg/max that reset
+  on plug/unplug.
+- Dashboard redesign and theme refresh; diagnostics lists the new metrics.
+- Removed references to other products from the planning documents.
+
+**Verification**
+
+- `flutter analyze` clean; `flutter test` 168/168 (16 new, 3 rewritten).
+- Kotlin JVM tests 30/30 (11 new) compiled with a standalone Kotlin compiler.
+- Not yet verified: Gradle/APK build and physical-device behavior (no Android
+  SDK in this environment).
+
 ## 2026-10-23 — v0.10.0 published
 
 **Summary**

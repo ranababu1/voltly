@@ -213,7 +213,7 @@ Choose tests based on the change, and record what actually ran.
 - Follow the Voltly visual direction: premium, restrained, AMOLED-friendly dark surfaces and mint-green accents.
 - Prioritize legibility and information hierarchy over decorative effects.
 - Use animation sparingly and ensure it communicates state rather than false precision.
-- Do not copy AmpereFlow's exact layouts, branding, icons, assets, text or proprietary implementation.
+- Do not copy any other battery app's layouts, branding, icons, assets, text or proprietary implementation, and never name another product anywhere in the app or repository.
 - Use a consistent design-token system for color, spacing, typography, radius and elevation.
 - Provide visual states for available, unavailable, stale, loading, error and insufficient-data conditions.
 - Do not imply a metric is measured if it is estimated.

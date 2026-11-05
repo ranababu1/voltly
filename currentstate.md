@@ -1,8 +1,8 @@
 # Current State
 
-**Last updated:** 2026-10-23
+**Last updated:** 2026-11-05
 **Milestone:** Phase 4 — Estimates (increment 1 complete; physical-device validation pending)
-**Project version:** `0.10.0+10` (versionCode 10)
+**Project version:** `0.11.0+11` (versionCode 11, unreleased)
 
 ## Release
 
@@ -43,6 +43,20 @@
 - Previous release: `v0.6.0` (pre-release), which predates live session tracking,
   history, charts and estimates.
 
+## 0.11.0 (unreleased)
+
+- Live current refreshes every second while the app is open; vendor unit/sign
+  deviations are learned and normalized natively.
+- New metrics: battery health, technology, cycle count (Android 14+).
+- Redesigned dashboard: live mA hero with trace and min/avg/max, level ring
+  with vitals, detail grid; refreshed palette (mint for charging, sky for
+  on-battery), tabular figures, theme polish.
+- Session samples are stored at most every 30 s (state changes always stored).
+- Verification: `flutter analyze` clean, `flutter test` 168/168, Kotlin JVM
+  tests 30/30 (run with a standalone compiler; no Android SDK in this
+  environment for Gradle; telemetry sources compile against the Android 14 API
+  and Flutter embedding jars, but no APK build or device check yet).
+
 ## Implemented and verified
 
 | Area | State | Verification |
@@ -75,7 +89,7 @@
 | Release signing | Dedicated Voltly key outside repo; four GitHub Actions secrets; release build verified with `apksigner` | Certificate SHA-256 and package/version/ABI checks |
 | GitHub release | `v0.9.0-preview` pre-release with universal APK, arm64 APK and AAB; `v0.6.0` retained | Uploaded asset download, signature, size and hash verification |
 | Static checks | Format, analyze clean | `dart format`, `flutter analyze` |
-| Native telemetry adapter | 8 metrics, per-metric availability, no polling | Kotlin tests; debug APK build |
+| Native telemetry adapter | 11 metrics, per-metric availability, 1 Hz foreground poll + broadcasts, learned mA/µA and sign calibration | 30 Kotlin JVM tests |
 | Native unit conversions | mV→V, tenths °C→°C, µA→A, µAh→mAh, sentinel handling | 13 Kotlin tests |
 | Dart telemetry contract | Strict parsing, zero-vs-unavailable, schema rejection | 16 Dart tests |
 | Calculated power | Battery-side watts with 2 s input skew rule | 7 Dart tests |

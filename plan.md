@@ -11,7 +11,7 @@
 
 Voltly is an Android-first battery-monitoring and charging-analytics application. It helps users understand battery state, electrical telemetry, charging behavior, temperature, and long-term battery trends through a polished, trustworthy interface.
 
-Voltly is inspired by the general category of battery-monitoring products such as AmpereFlow. It must have its own brand, user experience, source code, architecture, copy, and visual assets. Do not copy another product's proprietary implementation, branding, screenshots, or assets.
+Voltly belongs to the general category of battery-monitoring products. It must have its own brand, user experience, source code, architecture, copy, and visual assets. Do not copy another product's proprietary implementation, branding, screenshots, or assets.
 
 ### 1.1 Problem Statement
 

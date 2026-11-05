@@ -247,9 +247,11 @@ Feature directories are added only when a milestone needs them.
   from `ACTION_BATTERY_CHANGED` and `BatteryManager`, converts units once and
   publishes a versioned contract through MethodChannel/EventChannel. The Dart
   service is the only client. See `docs/telemetry-contract.md`.
-- **Dashboard:** renders live battery level, charging state, power source,
-  voltage, temperature, current, average current, charge counter and calculated
-  battery-side power. Availability, provenance, observation time and stale
+- **Dashboard:** leads with the live current in mA (refreshed every second
+  while open) with a 60-second trace and min/average/max for the current
+  plugged-in or on-battery phase, then a level ring with temperature, health
+  and power source, and a detail grid with voltage, calculated battery-side
+  power, average current, charge counter, technology and cycle count. Availability, provenance, observation time and stale
   state are visible; loading and error states replace the content without
   inventing values.
 - **Diagnostics:** the developer screen exposes the full contract, per-metric
@@ -257,8 +259,10 @@ Feature directories are added only when a milestone needs them.
 - **Lifecycle and sampling:** the app root observes Android lifecycle changes.
   Inactive/paused states cancel the subscription so the native receiver
   unregisters; resume re-subscribes immediately. The retained observation keeps
-  its original timestamp, so staleness remains honest. There is no polling or
-  background service.
+  its original timestamp, so staleness remains honest. While the app is open the
+  native adapter re-reads current once per second; nothing polls in the
+  background. Vendor current-unit and sign deviations are learned and
+  normalized natively (see `docs/telemetry-contract.md`).
 - **Session domain:** a pure `ChargingSessionTracker` consumes real snapshots and
   emits started/sample/ended updates. Charging starts a session; full or
   discharging completes it; a persistent `not_charging` state becomes an

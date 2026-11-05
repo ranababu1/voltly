@@ -13,14 +13,19 @@ No widget may call these channels or Android APIs directly.
 
 | Purpose | Channel | Contract |
 | --- | --- | --- |
-| Live updates | `com.voltly/telemetry/events` (`EventChannel`) | Emits a snapshot map whenever Android broadcasts `ACTION_BATTERY_CHANGED` while Dart is listening. |
+| Live updates | `com.voltly/telemetry/events` (`EventChannel`) | Emits a snapshot map on every `ACTION_BATTERY_CHANGED` broadcast and once per second while Dart is listening. |
 | On-demand read | `com.voltly/telemetry` (`MethodChannel`) | Method `getSnapshot` returns one snapshot map. |
 
 The native receiver is registered in `onListen` and unregistered in `onCancel`
 or engine cleanup. The Dart `TelemetryController` cancels its subscription when
 the app leaves the foreground, which unregisters the receiver; it resumes on
-return and retains the last snapshot. The adapter does not poll. Battery
-broadcasts are system-driven, so update cadence varies by device and state.
+return and retains the last snapshot.
+
+Android broadcasts only when level, status, temperature or voltage change, so
+`BATTERY_PROPERTY_CURRENT_NOW` would otherwise appear frozen for minutes. While
+Dart is listening the adapter therefore re-reads the battery properties once
+per second (a broadcast restarts the one-second timer). The poll exists only
+while the app is in the foreground and stops with the subscription.
 
 ## Snapshot envelope
 
@@ -63,6 +68,12 @@ The real payload also contains `chargingState`, `plugSource`, `voltage`,
 | `currentNow` | `amperes` | `BATTERY_PROPERTY_CURRENT_NOW` (microamperes) | divide by 1,000,000 |
 | `currentAverage` | `amperes` | `BATTERY_PROPERTY_CURRENT_AVERAGE` (microamperes) | divide by 1,000,000 |
 | `chargeCounter` | `milliampere_hours` | `BATTERY_PROPERTY_CHARGE_COUNTER` (microampere-hours, `getLongProperty`) | `value / 1000` |
+| `health` | none | `EXTRA_HEALTH` | `good`, `overheat`, `dead`, `over_voltage`, `failure`, `cold`; `UNKNOWN` is `unsupported` |
+| `technology` | none | `EXTRA_TECHNOLOGY` | trimmed string such as `Li-ion`; empty/`Unknown` is `unsupported` |
+| `cycleCount` | `count` | `EXTRA_CYCLE_COUNT` (API 34+) | integer cycles; older APIs report `unsupported` |
+
+`health`, `technology` and `cycleCount` are additive schema-1 keys. Older Dart
+builds ignore them; current Dart treats a missing key as `unsupported`.
 
 Android reports unsupported integer properties as `Integer.MIN_VALUE` and
 unsupported long properties as `Long.MIN_VALUE`. These become `unsupported`,
@@ -90,7 +101,16 @@ each metric independently and must not crash when one is missing.
 - **Current sign:** positive amperes means net current entering the battery
   (charging); negative means net current leaving it (discharging). This matches
   Android's documented `BATTERY_PROPERTY_CURRENT_NOW` and
-  `BATTERY_PROPERTY_CURRENT_AVERAGE` convention; Voltly does not invert it.
+  `BATTERY_PROPERTY_CURRENT_AVERAGE` convention.
+- **Vendor calibration:** some devices report milliamperes instead of
+  microamperes, or invert the sign. `CurrentCalibration` learns both from
+  unambiguous observations and persists them in the private
+  `voltly_current_calibration` preferences: a raw magnitude above 20,000 locks
+  microamperes; a non-zero magnitude below 10,000 while unplugged and
+  discharging means milliamperes; a positive value while unplugged and
+  discharging (|I| ≥ 5 mA) means the sign is inverted. Before the sign is
+  learned, a negative reading while `charging` is provisionally inverted but not
+  persisted. Readings emitted on the contract are always normalized.
 - **Power:** not sent by the native adapter. Dart derives
   `voltage * currentNow` only when both are available, in canonical units, and
   observed within 2 seconds of each other. It is labeled
