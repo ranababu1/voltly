@@ -19,6 +19,11 @@ class SessionCoordinator {
   final ChargingSessionTracker _tracker;
 
   int? _activeSessionId;
+
+  /// The session instance most recently returned to callers. Returned again,
+  /// unchanged, for observations that produce no update so callers can skip
+  /// redundant work with an identity check.
+  ChargingSession? _published;
   bool _initialized = false;
   Future<ChargingSession?>? _initializing;
   Future<void> _queue = Future<void>.value();
@@ -45,6 +50,7 @@ class SessionCoordinator {
       } else {
         _activeSessionId = null;
       }
+      _published = active;
       _initialized = true;
       return active;
     } catch (_) {
@@ -70,7 +76,7 @@ class SessionCoordinator {
 
     switch (update.kind) {
       case SessionUpdateKind.none:
-        return _tracker.activeSession;
+        return _published;
       case SessionUpdateKind.started:
         final ChargingSession persisted = await _store.startSession(
           session: update.session!,
@@ -80,7 +86,7 @@ class SessionCoordinator {
           throw StateError('Session store did not return a persisted id.');
         }
         _activeSessionId = persisted.id;
-        return persisted;
+        return _published = persisted;
       case SessionUpdateKind.sample:
         final int sessionId = _requireActiveSessionId();
         final ChargingSession current = update.session!.copyWith(id: sessionId);
@@ -89,7 +95,7 @@ class SessionCoordinator {
           session: current,
           sample: update.sample!,
         );
-        return current;
+        return _published = current;
       case SessionUpdateKind.ended:
         final int sessionId = _requireActiveSessionId();
         final ChargingSession ended = update.session!.copyWith(id: sessionId);
@@ -99,7 +105,7 @@ class SessionCoordinator {
           sample: update.sample!,
         );
         _activeSessionId = null;
-        return null;
+        return _published = null;
     }
   }
 
@@ -111,6 +117,7 @@ class SessionCoordinator {
     final Future<ChargingSession?> result = _queue.then((_) {
       _tracker.reset();
       _activeSessionId = null;
+      _published = null;
       _initialized = false;
       _initializing = null;
       return initialize();

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:voltly/core/telemetry/telemetry_models.dart';
+import 'package:voltly/features/dashboard/dashboard_painters.dart';
 import 'package:voltly/features/dashboard/telemetry_presentation.dart';
 
 import '../../support/fake_session_store.dart';
@@ -10,36 +11,128 @@ import '../../support/pump_voltly_app.dart';
 import '../../support/telemetry_fixtures.dart';
 
 void main() {
-  testWidgets('renders live primary and secondary telemetry with provenance', (
+  testWidgets('renders the live current hero and battery details', (
     WidgetTester tester,
   ) async {
     await pumpVoltlyApp(tester, snapshot: snapshotAt(DateTime.now()));
 
-    expect(find.text('Battery overview'), findsOneWidget);
-    expect(find.text('72%'), findsOneWidget);
+    expect(find.text('CURRENT NOW'), findsOneWidget);
+    expect(find.text('+1,500'), findsOneWidget);
+    expect(find.text('mA'), findsOneWidget);
     expect(find.text('Charging'), findsOneWidget);
-    expect(find.text('Power source: USB'), findsOneWidget);
+    expect(find.text('Flowing in via USB'), findsOneWidget);
+    expect(find.text('Live'), findsOneWidget);
+    expect(find.text('72%'), findsOneWidget);
+    expect(find.text('31.5 °C'), findsOneWidget);
+    expect(find.text('USB'), findsOneWidget);
     expect(find.text('Voltage'), findsOneWidget);
     expect(find.text('4.20 V'), findsOneWidget);
-    expect(find.text('Temperature'), findsOneWidget);
-    expect(find.text('31.5 °C'), findsOneWidget);
-    expect(find.text('Current now'), findsOneWidget);
-    expect(find.text('1.500 A'), findsOneWidget);
     expect(find.text('Average current'), findsOneWidget);
-    expect(find.text('1.400 A'), findsOneWidget);
+    expect(find.text('1,400 mA'), findsOneWidget);
     expect(find.text('Charge counter'), findsOneWidget);
-    expect(find.text('3500.0 mAh'), findsOneWidget);
+    expect(find.text('3,500 mAh'), findsOneWidget);
     expect(find.text('Battery-side power'), findsOneWidget);
     expect(find.text('6.30 W'), findsOneWidget);
     expect(find.text('Calculated'), findsOneWidget);
-    expect(find.text('Device'), findsWidgets);
-    expect(find.text('Live'), findsOneWidget);
-    expect(find.textContaining('Observed'), findsWidgets);
-    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(find.byType(BatteryLevelRing), findsOneWidget);
+    expect(find.byType(CurrentSparkline), findsOneWidget);
     final ChargingPulse pulse = tester.widget<ChargingPulse>(
       find.byType(ChargingPulse),
     );
     expect(pulse.active, isTrue);
+  });
+
+  testWidgets('shows a negative current while running on battery', (
+    WidgetTester tester,
+  ) async {
+    final int millis = DateTime.now().millisecondsSinceEpoch;
+    await pumpVoltlyApp(
+      tester,
+      snapshot: TelemetrySnapshot.fromPlatformPayload(
+        telemetryPayload(
+          observedAtMillis: millis,
+          chargingState: telemetryReading(
+            value: 'discharging',
+            timestampMillis: millis,
+          ),
+          plugSource: telemetryReading(value: 'none', timestampMillis: millis),
+          currentNow: telemetryReading(
+            value: -0.4825,
+            unit: TelemetryUnits.amperes,
+            timestampMillis: millis,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('\u2212483'), findsOneWidget);
+    expect(find.text('Discharging'), findsOneWidget);
+    expect(find.text('Running on battery'), findsOneWidget);
+    expect(find.text('Battery'), findsOneWidget);
+    expect(
+      tester.widget<ChargingPulse>(find.byType(ChargingPulse)).active,
+      isFalse,
+    );
+  });
+
+  testWidgets('shows min, average and max after a few live readings', (
+    WidgetTester tester,
+  ) async {
+    final DateTime start = DateTime.now().subtract(const Duration(seconds: 3));
+    final fake = await pumpVoltlyApp(
+      tester,
+      snapshot: _withCurrent(start, 1.2),
+    );
+    expect(find.text('MIN'), findsOneWidget);
+    // Health, technology and cycles are not in the fixture, so they show a
+    // dash too; the three stats add to that baseline until enough readings.
+    final int dashes = find.text('—').evaluate().length;
+    expect(dashes, greaterThanOrEqualTo(3));
+
+    fake.emit(_withCurrent(start.add(const Duration(seconds: 1)), 1.8));
+    await tester.pump();
+    fake.emit(_withCurrent(start.add(const Duration(seconds: 2)), 1.5));
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('1,200'), findsOneWidget);
+    expect(find.text('1,500'), findsOneWidget);
+    expect(find.text('1,800'), findsOneWidget);
+
+    expect(find.text('—'), findsNWidgets(dashes - 3));
+
+    await tester.tap(find.byTooltip('Reset min and max'));
+    await tester.pump();
+    expect(find.text('—'), findsNWidgets(dashes));
+  });
+
+  testWidgets('shows health, technology and cycle count when reported', (
+    WidgetTester tester,
+  ) async {
+    final int millis = DateTime.now().millisecondsSinceEpoch;
+    final Map<String, Object?> payload = telemetryPayload(
+      observedAtMillis: millis,
+    );
+    payload['health'] = telemetryReading(
+      value: 'good',
+      timestampMillis: millis,
+    );
+    payload['technology'] = telemetryReading(
+      value: 'Li-ion',
+      timestampMillis: millis,
+    );
+    payload['cycleCount'] = telemetryReading(
+      value: 1204,
+      unit: TelemetryUnits.count,
+      timestampMillis: millis,
+    );
+    await pumpVoltlyApp(
+      tester,
+      snapshot: TelemetrySnapshot.fromPlatformPayload(payload),
+    );
+
+    expect(find.text('Good'), findsOneWidget);
+    expect(find.text('Li-ion'), findsOneWidget);
+    expect(find.text('1,204'), findsOneWidget);
   });
 
   testWidgets('renders low-capability metrics without zero fallbacks', (
@@ -69,7 +162,7 @@ void main() {
           ),
           currentAverage: telemetryReading(
             availability: 'unsupported',
-            reason: 'No current sensor',
+            reason: 'No average current sensor',
           ),
           chargeCounter: telemetryReading(
             availability: 'unsupported',
@@ -81,16 +174,16 @@ void main() {
 
     expect(find.text('72%'), findsOneWidget);
     expect(find.text('Charging state unavailable'), findsOneWidget);
-    expect(find.text('Battery service busy'), findsOneWidget);
+    expect(find.text('Current unavailable'), findsOneWidget);
+    expect(find.text('No current sensor'), findsOneWidget);
     expect(find.text('No voltage sensor'), findsOneWidget);
-    expect(find.text('Temperature out of range'), findsOneWidget);
-    expect(find.text('No current sensor'), findsNWidgets(2));
+    expect(find.text('No average current sensor'), findsOneWidget);
     expect(find.text('No charge counter'), findsOneWidget);
     expect(find.text('Unsupported'), findsWidgets);
-    expect(find.text('Invalid'), findsOneWidget);
+    expect(find.byType(CurrentSparkline), findsNothing);
     expect(find.text('0.00 V'), findsNothing);
     expect(find.text('0.0 °C'), findsNothing);
-    expect(find.text('0.000 A'), findsNothing);
+    expect(find.textContaining('0 mA'), findsNothing);
     expect(find.text('0.00 W'), findsNothing);
     expect(
       tester.widget<ChargingPulse>(find.byType(ChargingPulse)).active,
@@ -118,7 +211,6 @@ void main() {
     expect(find.text('Battery level unavailable'), findsOneWidget);
     expect(find.text('No battery level sensor'), findsOneWidget);
     expect(find.textContaining('0%'), findsNothing);
-    expect(find.byType(LinearProgressIndicator), findsNothing);
   });
 
   testWidgets('shows a loading state without readings or percentages', (
@@ -177,7 +269,7 @@ void main() {
     await pumpVoltlyApp(tester, snapshot: snapshotAt(DateTime.now()));
 
     expect(tester.takeException(), isNull);
-    expect(find.text('Battery overview'), findsOneWidget);
+    expect(find.text('CURRENT NOW'), findsOneWidget);
     expect(find.text('72%'), findsOneWidget);
     expect(find.text('Battery-side power'), findsOneWidget);
   });
@@ -197,6 +289,10 @@ void main() {
       findsOneWidget,
     );
     expect(
+      find.bySemanticsLabel('Current now, 1500 milliamperes'),
+      findsOneWidget,
+    );
+    expect(
       find.bySemanticsLabel('Voltage, 4.20 volts, Available, Device'),
       findsOneWidget,
     );
@@ -205,7 +301,7 @@ void main() {
     await tester.pump();
     expect(
       find.bySemanticsLabel(
-        RegExp('Battery-side power, 6\\.30 watts, Calculated, Available'),
+        RegExp('Battery-side power, 6\\.30 watts, Available, Calculated'),
       ),
       findsOneWidget,
     );
@@ -259,4 +355,18 @@ void main() {
 
     expect(find.text('Session recording paused'), findsNothing);
   });
+}
+
+TelemetrySnapshot _withCurrent(DateTime at, double amps) {
+  final int millis = at.toUtc().millisecondsSinceEpoch;
+  return TelemetrySnapshot.fromPlatformPayload(
+    telemetryPayload(
+      observedAtMillis: millis,
+      currentNow: telemetryReading(
+        value: amps,
+        unit: TelemetryUnits.amperes,
+        timestampMillis: millis,
+      ),
+    ),
+  );
 }

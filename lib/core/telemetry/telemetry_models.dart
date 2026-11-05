@@ -28,6 +28,8 @@ enum BatteryChargingState { charging, discharging, notCharging, full }
 
 enum BatteryPlugSource { none, ac, usb, wireless, dock }
 
+enum BatteryHealth { good, overheat, dead, overVoltage, failure, cold }
+
 /// Canonical unit identifiers used across the platform contract.
 abstract final class TelemetryUnits {
   static const String percent = 'percent';
@@ -36,6 +38,7 @@ abstract final class TelemetryUnits {
   static const String amperes = 'amperes';
   static const String milliampereHours = 'milliampere_hours';
   static const String watts = 'watts';
+  static const String count = 'count';
 }
 
 /// An immutable metric reading with explicit availability and provenance.
@@ -76,7 +79,12 @@ class TelemetrySnapshot {
     required this.currentNow,
     required this.currentAverage,
     required this.chargeCounter,
-  });
+    TelemetryReading<BatteryHealth>? health,
+    TelemetryReading<String>? technology,
+    TelemetryReading<double>? cycleCount,
+  }) : health = health ?? const _NotReported<BatteryHealth>(),
+       technology = technology ?? const _NotReported<String>(),
+       cycleCount = cycleCount ?? const _NotReported<double>(unit: 'count');
 
   static const int supportedSchemaVersion = 1;
 
@@ -95,6 +103,12 @@ class TelemetrySnapshot {
   final TelemetryReading<double> currentNow;
   final TelemetryReading<double> currentAverage;
   final TelemetryReading<double> chargeCounter;
+
+  /// Additive schema-1 metrics. Older native builds omit them; a missing key
+  /// is treated as unsupported rather than invalid.
+  final TelemetryReading<BatteryHealth> health;
+  final TelemetryReading<String> technology;
+  final TelemetryReading<double> cycleCount;
 
   bool isStaleAt(DateTime now) => now.difference(observedAt) > staleAfter;
 
@@ -174,8 +188,89 @@ class TelemetrySnapshot {
         TelemetryUnits.milliampereHours,
         observedAt,
       ),
+      health: fields.containsKey('health')
+          ? _readEnum(fields, 'health', _healthStates, observedAt)
+          : _notReported<BatteryHealth>(observedAt),
+      technology: fields.containsKey('technology')
+          ? _readText(fields, 'technology', observedAt)
+          : _notReported<String>(observedAt),
+      cycleCount: fields.containsKey('cycleCount')
+          ? _readNumeric(fields, 'cycleCount', TelemetryUnits.count, observedAt)
+          : _notReported<double>(observedAt, unit: TelemetryUnits.count),
     );
   }
+}
+
+/// Default for optional metrics on snapshots built without them.
+class _NotReported<T extends Object> implements TelemetryReading<T> {
+  const _NotReported({this.unit});
+
+  @override
+  final String? unit;
+  @override
+  T? get value => null;
+  @override
+  TelemetryAvailability get availability => TelemetryAvailability.unsupported;
+  @override
+  TelemetrySource get source => TelemetrySource.device;
+  @override
+  DateTime get observedAt =>
+      DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+  @override
+  String? get reason => 'Not reported on this device.';
+  @override
+  bool get isAvailable => false;
+}
+
+TelemetryReading<T> _notReported<T extends Object>(
+  DateTime observedAt, {
+  String? unit,
+}) => TelemetryReading<T>(
+  availability: TelemetryAvailability.unsupported,
+  source: TelemetrySource.device,
+  observedAt: observedAt,
+  unit: unit,
+  reason: 'Not reported on this device.',
+);
+
+const Map<String, BatteryHealth> _healthStates = <String, BatteryHealth>{
+  'good': BatteryHealth.good,
+  'overheat': BatteryHealth.overheat,
+  'dead': BatteryHealth.dead,
+  'over_voltage': BatteryHealth.overVoltage,
+  'failure': BatteryHealth.failure,
+  'cold': BatteryHealth.cold,
+};
+
+TelemetryReading<String> _readText(
+  Map<String, Object?> snapshot,
+  String metric,
+  DateTime snapshotObservedAt,
+) {
+  final _ReadingEnvelope envelope = _readEnvelope(
+    snapshot[metric],
+    metric,
+    snapshotObservedAt,
+  );
+  if (!envelope.isUsable) {
+    return TelemetryReading<String>(
+      availability: envelope.availability,
+      source: envelope.source,
+      observedAt: envelope.observedAt,
+      reason: envelope.reason,
+    );
+  }
+  final Object? raw = envelope.fields!['value'];
+  if (raw is! String || raw.trim().isEmpty) {
+    return _invalidEnum(envelope, 'Metric "$metric" has no textual value.');
+  }
+  return TelemetryReading<String>(
+    value: raw.trim(),
+    availability: TelemetryAvailability.available,
+    source: envelope.source,
+    observedAt: envelope.observedAt,
+    reason: envelope.reason,
+  );
 }
 
 const Map<String, BatteryChargingState> _chargingStates =

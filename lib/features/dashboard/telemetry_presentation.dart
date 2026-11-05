@@ -40,6 +40,56 @@ String spokenTelemetryNumeric(
   return '${reading.value!.toStringAsFixed(decimals)} $unitName';
 }
 
+/// Groups thousands with commas: 12500 -> "12,500".
+String groupThousands(int value) {
+  final String digits = value.abs().toString();
+  final StringBuffer out = StringBuffer(value < 0 ? '-' : '');
+  for (int i = 0; i < digits.length; i++) {
+    if (i > 0 && (digits.length - i) % 3 == 0) out.write(',');
+    out.write(digits[i]);
+  }
+  return out.toString();
+}
+
+/// Whole milliamperes with grouping. With [signed], positive values get a
+/// leading "+" and negative values a typographic minus.
+String formatMilliampsValue(double milliamps, {bool signed = false}) {
+  final int rounded = milliamps.round();
+  final String magnitude = groupThousands(rounded.abs());
+  if (!signed || rounded == 0) {
+    return rounded < 0 ? '\u2212$magnitude' : magnitude;
+  }
+  return rounded > 0 ? '+$magnitude' : '\u2212$magnitude';
+}
+
+/// A current reading (amperes) shown as milliamperes, e.g. "1,400 mA".
+String formatTelemetryMilliamps(TelemetryReading<double> reading) {
+  if (!reading.isAvailable) return 'Unavailable';
+  return '${formatMilliampsValue(reading.value! * 1000)} mA';
+}
+
+String spokenMilliamps(TelemetryReading<double> reading) {
+  if (!reading.isAvailable) return 'unavailable';
+  return '${(reading.value! * 1000).round()} milliamperes';
+}
+
+String formatTelemetryHealth(TelemetryReading<BatteryHealth> reading) {
+  if (!reading.isAvailable) return 'Unavailable';
+  return switch (reading.value!) {
+    BatteryHealth.good => 'Good',
+    BatteryHealth.overheat => 'Overheating',
+    BatteryHealth.dead => 'Dead',
+    BatteryHealth.overVoltage => 'Over voltage',
+    BatteryHealth.failure => 'Failure',
+    BatteryHealth.cold => 'Too cold',
+  };
+}
+
+String formatTelemetryCycles(TelemetryReading<double> reading) {
+  if (!reading.isAvailable) return 'Unavailable';
+  return groupThousands(reading.value!.round());
+}
+
 String formatTelemetryChargingState(
   TelemetryReading<BatteryChargingState> reading,
 ) {

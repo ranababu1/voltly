@@ -192,7 +192,7 @@ void main() {
     await tester.tap(find.byTooltip('Open Voltly'));
     await _pumpRoute(tester);
     expect(find.byType(ChargingScreen), findsNothing);
-    expect(find.text('Battery overview'), findsOneWidget);
+    expect(find.text('CURRENT NOW'), findsOneWidget);
   });
 
   testWidgets('dashboard card turns the charging screen on', (

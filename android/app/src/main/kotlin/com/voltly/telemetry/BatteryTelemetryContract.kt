@@ -32,6 +32,12 @@ internal object BatteryTelemetryContract {
     const val METRIC_CURRENT_AVERAGE = "currentAverage"
     const val METRIC_CHARGE_COUNTER = "chargeCounter"
 
+    // Additive schema-1 metrics. Older Dart builds ignore unknown keys and
+    // newer builds treat a missing key as unsupported.
+    const val METRIC_HEALTH = "health"
+    const val METRIC_TECHNOLOGY = "technology"
+    const val METRIC_CYCLE_COUNT = "cycleCount"
+
     const val AVAILABILITY_AVAILABLE = "available"
     const val AVAILABILITY_UNSUPPORTED = "unsupported"
     const val AVAILABILITY_TEMPORARILY_UNAVAILABLE = "temporarily_unavailable"

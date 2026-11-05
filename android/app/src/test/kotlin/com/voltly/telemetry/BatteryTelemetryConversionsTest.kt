@@ -104,4 +104,27 @@ class BatteryTelemetryConversionsTest {
         assertNull(BatteryTelemetryConversions.plugName(3))
         assertNull(BatteryTelemetryConversions.plugName(-1))
     }
+
+    @Test
+    fun `health maps documented states and hides unknown`() {
+        assertEquals("good", BatteryTelemetryConversions.healthName(2))
+        assertEquals("overheat", BatteryTelemetryConversions.healthName(3))
+        assertEquals("cold", BatteryTelemetryConversions.healthName(7))
+        assertNull(BatteryTelemetryConversions.healthName(1))
+        assertNull(BatteryTelemetryConversions.healthName(Int.MIN_VALUE))
+    }
+
+    @Test
+    fun `technology is trimmed and unknown is hidden`() {
+        assertEquals("Li-ion", BatteryTelemetryConversions.technologyName(" Li-ion "))
+        assertNull(BatteryTelemetryConversions.technologyName("Unknown"))
+        assertNull(BatteryTelemetryConversions.technologyName(""))
+        assertNull(BatteryTelemetryConversions.technologyName(null))
+    }
+
+    @Test
+    fun `cycle count rejects negative values`() {
+        assertEquals(412.0, BatteryTelemetryConversions.cycleCount(412)!!, 0.0)
+        assertNull(BatteryTelemetryConversions.cycleCount(-1))
+    }
 }

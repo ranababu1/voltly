@@ -8,7 +8,14 @@ class ChargingSessionTrackerConfig {
   const ChargingSessionTrackerConfig({
     this.samplingGapThreshold = const Duration(minutes: 5),
     this.notChargingGrace = const Duration(minutes: 2),
+    this.minimumSampleInterval = const Duration(seconds: 30),
   });
+
+  /// Live telemetry arrives about once per second while the app is open.
+  /// Persisting every reading would exhaust the per-session sample cap within
+  /// minutes, so a sample is stored at most this often unless the charging
+  /// state changes. Zero stores every observation.
+  final Duration minimumSampleInterval;
 
   /// A gap between accepted samples longer than this marks the session partial.
   final Duration samplingGapThreshold;
@@ -72,6 +79,8 @@ class SessionUpdate {
 /// - An unavailable charging state keeps the session active but records the
 ///   sample with its unavailable metadata.
 /// - Out-of-order or duplicate observation timestamps are ignored.
+/// - Observations within [ChargingSessionTrackerConfig.minimumSampleInterval]
+///   of the last stored sample are skipped unless the charging state changed.
 class ChargingSessionTracker {
   ChargingSessionTracker({this.config = const ChargingSessionTrackerConfig()});
 
@@ -80,6 +89,7 @@ class ChargingSessionTracker {
   ChargingSession? _activeSession;
   DateTime? _lastSampleAt;
   DateTime? _notChargingSince;
+  BatteryChargingState? _lastChargingState;
   Duration _maxSamplingGap = Duration.zero;
   bool _hasSamplingGaps = false;
 
@@ -102,6 +112,7 @@ class ChargingSessionTracker {
     _maxSamplingGap = session.maxSamplingGap ?? Duration.zero;
     _hasSamplingGaps = session.hasSamplingGaps;
     _notChargingSince = null;
+    _lastChargingState = BatteryChargingState.charging;
   }
 
   SessionUpdate observe(TelemetrySnapshot snapshot) {
@@ -123,6 +134,13 @@ class ChargingSessionTracker {
     if (lastSampleAt != null && !observedAt.isAfter(lastSampleAt)) {
       return const SessionUpdate.none();
     }
+
+    if (lastSampleAt != null &&
+        chargingState == _lastChargingState &&
+        observedAt.difference(lastSampleAt) < config.minimumSampleInterval) {
+      return const SessionUpdate.none();
+    }
+    _lastChargingState = chargingState;
 
     final TelemetrySample sample = TelemetrySample.fromSnapshot(snapshot);
     final ChargingSession withSample = _appendSample(active, snapshot);
@@ -160,6 +178,7 @@ class ChargingSessionTracker {
     _activeSession = null;
     _lastSampleAt = null;
     _notChargingSince = null;
+    _lastChargingState = null;
     _maxSamplingGap = Duration.zero;
     _hasSamplingGaps = false;
   }
@@ -179,6 +198,7 @@ class ChargingSessionTracker {
     _activeSession = session;
     _lastSampleAt = snapshot.observedAt;
     _notChargingSince = null;
+    _lastChargingState = BatteryChargingState.charging;
     _maxSamplingGap = Duration.zero;
     _hasSamplingGaps = false;
 
@@ -234,6 +254,7 @@ class ChargingSessionTracker {
     _activeSession = null;
     _lastSampleAt = null;
     _notChargingSince = null;
+    _lastChargingState = null;
     _maxSamplingGap = Duration.zero;
     _hasSamplingGaps = false;
 

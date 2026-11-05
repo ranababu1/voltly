@@ -31,7 +31,7 @@ abstract final class AppTheme {
     surface: AppColors.surface,
     onSurface: AppColors.textPrimary,
     surfaceDim: AppColors.background,
-    surfaceBright: AppColors.surfaceElevated,
+    surfaceBright: AppColors.surfaceHighlight,
     surfaceContainerLowest: AppColors.background,
     surfaceContainerLow: AppColors.surface,
     surfaceContainer: AppColors.surface,
@@ -82,10 +82,69 @@ abstract final class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.card,
           side: BorderSide(color: AppColors.outline),
         ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.mint,
+          foregroundColor: AppColors.background,
+          minimumSize: const Size(48, 48),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.pill),
+          textStyle: AppTypography.textTheme.labelLarge,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.mint,
+          minimumSize: const Size(48, 40),
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.pill),
+          textStyle: AppTypography.textTheme.labelLarge,
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          foregroundColor: AppColors.textSecondary,
+          minimumSize: const Size(44, 44),
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith(
+          (Set<WidgetState> states) => states.contains(WidgetState.selected)
+              ? AppColors.background
+              : AppColors.textSecondary,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (Set<WidgetState> states) => states.contains(WidgetState.selected)
+              ? AppColors.mint
+              : AppColors.surfaceElevated,
+        ),
+        trackOutlineColor: WidgetStateProperty.resolveWith(
+          (Set<WidgetState> states) => states.contains(WidgetState.selected)
+              ? AppColors.mint
+              : AppColors.outlineStrong,
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.surfaceHighlight,
+        contentTextStyle: AppTypography.textTheme.bodyMedium?.copyWith(
+          color: AppColors.textPrimary,
+        ),
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.tile),
+      ),
+      listTileTheme: const ListTileThemeData(
+        iconColor: AppColors.textSecondary,
+        contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      ),
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: <TargetPlatform, PageTransitionsBuilder>{
+          TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+        },
       ),
       dividerTheme: const DividerThemeData(
         color: AppColors.outline,

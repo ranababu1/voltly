@@ -22,6 +22,7 @@ internal object BatteryTelemetryConversions {
     const val UNIT_CELSIUS = "celsius"
     const val UNIT_AMPERES = "amperes"
     const val UNIT_MILLIAMPERE_HOURS = "milliampere_hours"
+    const val UNIT_COUNT = "count"
 
     private const val MIN_PLAUSIBLE_MILLIVOLTS = 1_000
     private const val MAX_PLAUSIBLE_MILLIVOLTS = 20_000
@@ -29,6 +30,7 @@ internal object BatteryTelemetryConversions {
     private const val MAX_PLAUSIBLE_TENTHS_CELSIUS = 1_000
     private const val MAX_PLAUSIBLE_MICROAMPS = 20_000_000
     private const val MAX_PLAUSIBLE_MICROAMP_HOURS = 100_000_000L
+    private const val MAX_PLAUSIBLE_CYCLE_COUNT = 100_000
 
     fun levelToPercent(level: Int, scale: Int): Double? =
         if (scale > 0 && level in 0..scale) level * 100.0 / scale else null
@@ -60,6 +62,32 @@ internal object BatteryTelemetryConversions {
         } else {
             null
         }
+
+    fun cycleCount(raw: Int): Double? =
+        if (raw in 0..MAX_PLAUSIBLE_CYCLE_COUNT) raw.toDouble() else null
+
+    /**
+     * Maps BatteryManager.BATTERY_HEALTH_* values. UNKNOWN (1) is treated as
+     * not reported rather than as a health state.
+     */
+    fun healthName(health: Int): String? = when (health) {
+        2 -> "good" // BATTERY_HEALTH_GOOD
+        3 -> "overheat" // BATTERY_HEALTH_OVERHEAT
+        4 -> "dead" // BATTERY_HEALTH_DEAD
+        5 -> "over_voltage" // BATTERY_HEALTH_OVER_VOLTAGE
+        6 -> "failure" // BATTERY_HEALTH_UNSPECIFIED_FAILURE
+        7 -> "cold" // BATTERY_HEALTH_COLD
+        else -> null
+    }
+
+    /** Normalizes the free-form EXTRA_TECHNOLOGY string, e.g. "Li-ion". */
+    fun technologyName(raw: String?): String? {
+        val trimmed = raw?.trim().orEmpty()
+        if (trimmed.isEmpty() || trimmed.equals("unknown", ignoreCase = true)) {
+            return null
+        }
+        return trimmed.take(32)
+    }
 
     /**
      * Maps BatteryManager.BATTERY_STATUS_* values without referencing the

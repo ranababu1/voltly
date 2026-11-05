@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
+import android.os.Build
 
 /**
  * The single native source of battery telemetry.
@@ -15,11 +16,31 @@ import android.os.BatteryManager
 internal class BatteryTelemetryReader(private val context: Context) {
     private val batteryManager =
         context.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+    private val calibrationPrefs =
+        context.getSharedPreferences(CALIBRATION_PREFS, Context.MODE_PRIVATE)
+    private val calibration = CurrentCalibration(
+        reportsMilliamps = calibrationPrefs.getBoolean(KEY_REPORTS_MILLIAMPS, false),
+        signInverted = calibrationPrefs.getBoolean(KEY_SIGN_INVERTED, false),
+        signLearned = calibrationPrefs.getBoolean(KEY_SIGN_LEARNED, false),
+    )
 
     fun read(): Map<String, Any?> = read(stickyBatteryIntent())
 
     fun read(intent: Intent?): Map<String, Any?> {
         val observedAtMillis = System.currentTimeMillis()
+        val pluggedRaw = intent?.takeIf { it.hasExtra(BatteryManager.EXTRA_PLUGGED) }
+            ?.getIntExtra(BatteryManager.EXTRA_PLUGGED, Int.MIN_VALUE)
+        val statusName = BatteryTelemetryConversions.statusName(
+            intent?.getIntExtra(BatteryManager.EXTRA_STATUS, Int.MIN_VALUE)
+                ?: Int.MIN_VALUE,
+        )
+        val currentNow = readIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
+        val currentAverage =
+            readIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_AVERAGE)
+        if (calibration.observe(currentNow.value?.toInt(), pluggedRaw, statusName)) {
+            persistCalibration()
+        }
+
         return mapOf(
             BatteryTelemetryContract.KEY_SCHEMA_VERSION to
                 BatteryTelemetryContract.SCHEMA_VERSION,
@@ -35,18 +56,91 @@ internal class BatteryTelemetryReader(private val context: Context) {
             BatteryTelemetryContract.METRIC_TEMPERATURE to
                 readTemperature(intent, observedAtMillis),
             BatteryTelemetryContract.METRIC_CURRENT_NOW to
-                readCurrent(
-                    BatteryManager.BATTERY_PROPERTY_CURRENT_NOW,
-                    observedAtMillis,
-                ),
+                readCurrent(currentNow, statusName, observedAtMillis),
             BatteryTelemetryContract.METRIC_CURRENT_AVERAGE to
-                readCurrent(
-                    BatteryManager.BATTERY_PROPERTY_CURRENT_AVERAGE,
-                    observedAtMillis,
-                ),
+                readCurrent(currentAverage, statusName, observedAtMillis),
             BatteryTelemetryContract.METRIC_CHARGE_COUNTER to
                 readChargeCounter(observedAtMillis),
+            BatteryTelemetryContract.METRIC_HEALTH to
+                readHealth(intent, observedAtMillis),
+            BatteryTelemetryContract.METRIC_TECHNOLOGY to
+                readTechnology(intent, observedAtMillis),
+            BatteryTelemetryContract.METRIC_CYCLE_COUNT to
+                readCycleCount(intent, observedAtMillis),
         )
+    }
+
+    private fun persistCalibration() {
+        calibrationPrefs.edit()
+            .putBoolean(KEY_REPORTS_MILLIAMPS, calibration.reportsMilliamps)
+            .putBoolean(KEY_SIGN_INVERTED, calibration.signInverted)
+            .putBoolean(KEY_SIGN_LEARNED, calibration.signLearned)
+            .apply()
+    }
+
+    private fun readHealth(intent: Intent?, timestampMillis: Long): Map<String, Any?> {
+        val raw = intent?.getIntExtra(BatteryManager.EXTRA_HEALTH, Int.MIN_VALUE)
+            ?: Int.MIN_VALUE
+        val name = BatteryTelemetryConversions.healthName(raw)
+        return if (name != null) {
+            availableTextReading(name, timestampMillis)
+        } else {
+            unavailableTextReading(
+                BatteryTelemetryContract.AVAILABILITY_UNSUPPORTED,
+                "Android did not report a battery health state.",
+                timestampMillis,
+            )
+        }
+    }
+
+    private fun readTechnology(
+        intent: Intent?,
+        timestampMillis: Long,
+    ): Map<String, Any?> {
+        val name = BatteryTelemetryConversions.technologyName(
+            intent?.getStringExtra(BatteryManager.EXTRA_TECHNOLOGY),
+        )
+        return if (name != null) {
+            availableTextReading(name, timestampMillis)
+        } else {
+            unavailableTextReading(
+                BatteryTelemetryContract.AVAILABILITY_UNSUPPORTED,
+                "Android did not report the battery technology.",
+                timestampMillis,
+            )
+        }
+    }
+
+    private fun readCycleCount(
+        intent: Intent?,
+        timestampMillis: Long,
+    ): Map<String, Any?> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE ||
+            intent?.hasExtra(BatteryManager.EXTRA_CYCLE_COUNT) != true
+        ) {
+            return unavailableNumericReading(
+                BatteryTelemetryConversions.UNIT_COUNT,
+                BatteryTelemetryContract.AVAILABILITY_UNSUPPORTED,
+                "Cycle count is reported only on Android 14+ devices that expose it.",
+                timestampMillis,
+            )
+        }
+        val raw = intent.getIntExtra(BatteryManager.EXTRA_CYCLE_COUNT, Int.MIN_VALUE)
+        val cycles = BatteryTelemetryConversions.cycleCount(raw)
+        return if (cycles != null) {
+            availableNumericReading(
+                cycles,
+                BatteryTelemetryConversions.UNIT_COUNT,
+                timestampMillis,
+            )
+        } else {
+            unavailableNumericReading(
+                BatteryTelemetryConversions.UNIT_COUNT,
+                BatteryTelemetryContract.AVAILABILITY_INVALID,
+                "Cycle count was outside the plausible range.",
+                timestampMillis,
+            )
+        }
     }
 
     private fun stickyBatteryIntent(): Intent? = try {
@@ -193,12 +287,12 @@ internal class BatteryTelemetryReader(private val context: Context) {
     }
 
     private fun readCurrent(
-        propertyId: Int,
+        property: PropertyResult,
+        statusName: String?,
         timestampMillis: Long,
     ): Map<String, Any?> {
-        val property = readIntProperty(propertyId)
-        val rawMicroamps = property.value?.toInt()
-        if (rawMicroamps == null) {
+        val raw = property.value?.toInt()
+        if (raw == null) {
             return unavailableNumericReading(
                 BatteryTelemetryConversions.UNIT_AMPERES,
                 property.availability,
@@ -206,8 +300,7 @@ internal class BatteryTelemetryReader(private val context: Context) {
                 timestampMillis,
             )
         }
-        val amperes =
-            BatteryTelemetryConversions.microampsToAmps(rawMicroamps)
+        val amperes = calibration.toAmperes(raw, statusName)
         return if (amperes != null) {
             availableNumericReading(
                 amperes,
@@ -387,4 +480,11 @@ internal class BatteryTelemetryReader(private val context: Context) {
         val availability: String,
         val reason: String?,
     )
+
+    private companion object {
+        const val CALIBRATION_PREFS = "voltly_current_calibration"
+        const val KEY_REPORTS_MILLIAMPS = "reportsMilliamps"
+        const val KEY_SIGN_INVERTED = "signInverted"
+        const val KEY_SIGN_LEARNED = "signLearned"
+    }
 }

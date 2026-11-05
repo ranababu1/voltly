@@ -90,6 +90,13 @@ class SessionTrackingController extends Notifier<SessionTrackingState> {
     try {
       final ChargingSession? active = await _coordinator.observe(snapshot);
       if (!ref.mounted) return;
+      // Most 1 Hz observations are throttled by the tracker and return the
+      // same session instance; skip those so history is not reloaded.
+      if (state.initialized &&
+          !state.hasError &&
+          identical(active, state.activeSession)) {
+        return;
+      }
       _halted = false;
       state = SessionTrackingState.ready(active);
       ref.invalidate(sessionHistoryProvider);

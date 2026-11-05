@@ -15,8 +15,8 @@ void main() {
   ) async {
     await pumpVoltlyApp(tester, snapshot: snapshotAt(DateTime.now()));
 
-    expect(find.text('VOLTLY'), findsOneWidget);
-    expect(find.text('Battery overview'), findsOneWidget);
+    expect(find.text('Voltly'), findsOneWidget);
+    expect(find.text('CURRENT NOW'), findsOneWidget);
     expect(find.byTooltip('Telemetry diagnostics'), findsOneWidget);
 
     final BuildContext context = tester.element(find.byType(Scaffold));

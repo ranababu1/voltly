@@ -9,13 +9,38 @@ import 'package:voltly/app/theme/app_colors.dart';
 /// Sizes and line heights are tuned for dense telemetry without sacrificing
 /// legibility when the system text scale is increased.
 abstract final class AppTypography {
+  /// Fixed-width digits so live values do not jitter as they update.
+  static const List<FontFeature> tabular = <FontFeature>[
+    FontFeature.tabularFigures(),
+  ];
+
+  /// Hero numeral for the live current readout.
+  static const TextStyle heroNumber = TextStyle(
+    fontSize: 64,
+    height: 1,
+    fontWeight: FontWeight.w300,
+    letterSpacing: -2.5,
+    color: AppColors.textPrimary,
+    fontFeatures: tabular,
+  );
+
+  /// Eyebrow label above a value, e.g. "CURRENT".
+  static const TextStyle eyebrow = TextStyle(
+    fontSize: 11,
+    height: 1.2,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 1.6,
+    color: AppColors.textTertiary,
+  );
+
   static const TextTheme textTheme = TextTheme(
     displayLarge: TextStyle(
       fontSize: 56,
       height: 1,
-      fontWeight: FontWeight.w600,
+      fontWeight: FontWeight.w300,
       letterSpacing: -2.2,
       color: AppColors.textPrimary,
+      fontFeatures: tabular,
     ),
     displaySmall: TextStyle(
       fontSize: 40,
@@ -30,6 +55,7 @@ abstract final class AppTypography {
       fontWeight: FontWeight.w600,
       letterSpacing: -0.6,
       color: AppColors.textPrimary,
+      fontFeatures: tabular,
     ),
     titleLarge: TextStyle(
       fontSize: 20,
@@ -37,6 +63,7 @@ abstract final class AppTypography {
       fontWeight: FontWeight.w600,
       letterSpacing: -0.2,
       color: AppColors.textPrimary,
+      fontFeatures: tabular,
     ),
     titleMedium: TextStyle(
       fontSize: 16,
