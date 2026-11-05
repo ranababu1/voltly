@@ -73,7 +73,7 @@ abstract final class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: AppTypography.textTheme.titleLarge,
+        titleTextStyle: base.textTheme.titleLarge,
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
         systemOverlayStyle: overlayStyle,
       ),
@@ -95,7 +95,7 @@ abstract final class AppTheme {
           minimumSize: const Size(48, 48),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           shape: const RoundedRectangleBorder(borderRadius: AppRadius.pill),
-          textStyle: AppTypography.textTheme.labelLarge,
+          textStyle: base.textTheme.labelLarge,
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -103,7 +103,7 @@ abstract final class AppTheme {
           foregroundColor: AppColors.mint,
           minimumSize: const Size(48, 40),
           shape: const RoundedRectangleBorder(borderRadius: AppRadius.pill),
-          textStyle: AppTypography.textTheme.labelLarge,
+          textStyle: base.textTheme.labelLarge,
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
@@ -132,7 +132,7 @@ abstract final class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.surfaceHighlight,
-        contentTextStyle: AppTypography.textTheme.bodyMedium?.copyWith(
+        contentTextStyle: base.textTheme.bodyMedium?.copyWith(
           color: AppColors.textPrimary,
         ),
         shape: const RoundedRectangleBorder(borderRadius: AppRadius.tile),

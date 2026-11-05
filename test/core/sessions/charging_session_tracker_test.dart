@@ -315,4 +315,35 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  test('throttles 1 Hz observations to the minimum sample interval', () {
+    final ChargingSessionTracker tracker = ChargingSessionTracker();
+    tracker.observe(sessionSnapshot(at: t0, level: 40));
+
+    for (int i = 1; i < 30; i++) {
+      final SessionUpdate skipped = tracker.observe(
+        sessionSnapshot(at: t0.add(Duration(seconds: i)), level: 40),
+      );
+      expect(skipped.kind, SessionUpdateKind.none);
+    }
+    final SessionUpdate stored = tracker.observe(
+      sessionSnapshot(at: t0.add(const Duration(seconds: 30)), level: 41),
+    );
+    expect(stored.kind, SessionUpdateKind.sample);
+    expect(stored.session!.sampleCount, 2);
+  });
+
+  test('a charging-state change is never throttled', () {
+    final ChargingSessionTracker tracker = ChargingSessionTracker();
+    tracker.observe(sessionSnapshot(at: t0, level: 99));
+
+    final SessionUpdate update = tracker.observe(
+      sessionSnapshot(
+        at: t0.add(const Duration(seconds: 2)),
+        state: 'full',
+        level: 100,
+      ),
+    );
+    expect(update.kind, SessionUpdateKind.ended);
+  });
 }

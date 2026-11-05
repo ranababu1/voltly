@@ -65,7 +65,7 @@ void main() {
     expect(find.text('Battery-side power'), findsOneWidget);
     expect(find.text('6.30 W'), findsOneWidget);
     expect(find.text('Calculated'), findsOneWidget);
-    expect(find.text('Device'), findsNWidgets(8));
+    expect(find.text('Device'), findsNWidgets(11));
     expect(
       find.textContaining('Approximate battery-side power'),
       findsOneWidget,

@@ -245,4 +245,36 @@ void main() {
       );
     });
   });
+
+  test('parses health, technology and cycle count when present', () {
+    final Map<String, Object?> payload = telemetryPayload();
+    payload['health'] = telemetryReading(value: 'overheat');
+    payload['technology'] = telemetryReading(value: ' Li-poly ');
+    payload['cycleCount'] = telemetryReading(
+      value: 321,
+      unit: TelemetryUnits.count,
+    );
+    final TelemetrySnapshot snapshot = parseFixture(payload);
+
+    expect(snapshot.health.value, BatteryHealth.overheat);
+    expect(snapshot.technology.value, 'Li-poly');
+    expect(snapshot.cycleCount.value, 321);
+  });
+
+  test('treats missing optional metrics as unsupported, not invalid', () {
+    final TelemetrySnapshot snapshot = parseFixture();
+
+    expect(snapshot.health.availability, TelemetryAvailability.unsupported);
+    expect(snapshot.technology.isAvailable, isFalse);
+    expect(snapshot.cycleCount.availability, TelemetryAvailability.unsupported);
+  });
+
+  test('rejects an unknown health value as invalid', () {
+    final Map<String, Object?> payload = telemetryPayload();
+    payload['health'] = telemetryReading(value: 'sparkly');
+    expect(
+      parseFixture(payload).health.availability,
+      TelemetryAvailability.invalid,
+    );
+  });
 }

@@ -205,14 +205,29 @@ class _DiagnosticsBody extends StatelessWidget {
                     'mAh',
                   ),
                 ),
+                _ReadingRow(
+                  label: 'Health',
+                  reading: snapshot.health,
+                  value: formatTelemetryHealth(snapshot.health),
+                ),
+                _ReadingRow(
+                  label: 'Technology',
+                  reading: snapshot.technology,
+                  value: snapshot.technology.value ?? 'Unavailable',
+                ),
+                _ReadingRow(
+                  label: 'Cycle count',
+                  reading: snapshot.cycleCount,
+                  value: formatTelemetryCycles(snapshot.cycleCount),
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
             _PowerCard(power: power),
             const SizedBox(height: AppSpacing.lg),
             Text(
-              'Contract v${snapshot.schemaVersion} · In-memory only · '
-              'Nothing is stored or transmitted.',
+              'Contract v${snapshot.schemaVersion} · Refreshed every second '
+              'while open · Nothing leaves this device.',
               style: textTheme.bodySmall,
               textAlign: TextAlign.center,
             ),

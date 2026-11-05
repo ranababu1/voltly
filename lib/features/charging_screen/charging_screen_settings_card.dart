@@ -37,6 +37,20 @@ class ChargingScreenSettingsCard extends ConsumerWidget {
           children: <Widget>[
             Row(
               children: <Widget>[
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: AppColors.mintContainer,
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: const Icon(
+                    Icons.screen_lock_portrait_rounded,
+                    size: 19,
+                    color: AppColors.mint,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text('Charging screen', style: textTheme.titleMedium),
                 ),
@@ -47,11 +61,14 @@ class ChargingScreenSettingsCard extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'Shows the time, battery level, temperature, current and '
               'estimate on the lock screen when you plug in. Keeps a silent '
               'notification while on.',
-              style: textTheme.bodyMedium,
+              style: textTheme.bodySmall?.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
             if (status.enabled && !status.notificationsAllowed) ...<Widget>[
               const SizedBox(height: AppSpacing.sm),
